@@ -1,3 +1,4 @@
+import { AboutMovember } from "../about-movember";
 import {
   ArrowUpRight,
   Footprints,
@@ -308,6 +309,7 @@ export default async function Dashboard({
           ))}
         </div>
       </section>
+      <AboutMovember />
       <div className="dashboard-grid">
         <section className="panel">
           <p className="eyebrow">THE CLUB NOTICEBOARD</p>

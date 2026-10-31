@@ -6,6 +6,21 @@ export async function locale(): Promise<Locale> {
 export const copy = {
   en: {
     home: "Clubhouse",
+    aboutMovember: "More than a moustache",
+    movemberEyebrow: "THE STORY BEHIND NOVEMBER",
+    movemberHistory:
+      "Movember began in Melbourne, Australia, in 2003, when 30 friends took on the challenge of bringing back the moustache. That small idea grew into a worldwide movement for men’s health.",
+    movemberMission:
+      "Today, Movember supports mental health and suicide prevention, prostate cancer, and testicular cancer. The moustache is a conversation starter: a reminder to check in, talk openly, and look after ourselves and each other.",
+    movemberConnection:
+      "Our independently organized friends-and-family challenge carries that spirit into November: build healthy habits, stay connected, and encourage one another. Everyone is welcome—no moustache required.",
+    movemberLearn: "Read Movember’s story",
+    movemberGivingTitle: "Keep the good going",
+    movemberGiving:
+      "An optional donation to the official Movember organization is another way to support men’s health, during November or when our challenge ends. Donating is entirely your choice and does not affect scores, rankings, or prizes.",
+    movemberDonate: "Explore donating to Movember",
+    movemberExternal:
+      "Opens the official Movember website. Donations are handled there, not through this app.",
     goals: "My goals",
     log: "Log progress",
     leaderboard: "Rankings",
@@ -96,6 +111,21 @@ export const copy = {
   },
   es: {
     home: "El club",
+    aboutMovember: "Mucho más que un bigote",
+    movemberEyebrow: "LA HISTORIA DETRÁS DE NOVIEMBRE",
+    movemberHistory:
+      "Movember nació en Melbourne, Australia, en 2003, cuando 30 amigos aceptaron el reto de volver a ponerse bigote. Esa pequeña idea se convirtió en un movimiento mundial por la salud masculina.",
+    movemberMission:
+      "Hoy, Movember apoya la salud mental y la prevención del suicidio, y la lucha contra el cáncer de próstata y de testículos. El bigote abre conversaciones: nos recuerda preguntar cómo estamos, hablar con confianza y cuidarnos unos a otros.",
+    movemberConnection:
+      "Nuestro reto independiente de amigos y familiares lleva ese espíritu a noviembre: crear hábitos saludables, mantenernos conectados y animarnos mutuamente. Todos son bienvenidos, con o sin bigote.",
+    movemberLearn: "Conoce la historia de Movember",
+    movemberGivingTitle: "Que lo bueno continúe",
+    movemberGiving:
+      "Una donación opcional a la organización oficial de Movember es otra forma de apoyar la salud masculina, durante noviembre o al terminar nuestro reto. Donar es una decisión personal y no afecta a las puntuaciones, la clasificación ni los premios.",
+    movemberDonate: "Información para donar a Movember",
+    movemberExternal:
+      "Abre la web oficial de Movember. Las donaciones se realizan allí, no en esta aplicación.",
     goals: "Mis metas",
     log: "Registrar avance",
     leaderboard: "Clasificación",

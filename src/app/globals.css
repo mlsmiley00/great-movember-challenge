@@ -1871,3 +1871,64 @@ details[open] > summary {
 .greeting h2 {
   overflow-wrap: anywhere;
 }
+.about-movember-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.about-movember-heading .eyebrow {
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.about-movember-heading h2 {
+  margin-bottom: 0;
+}
+.about-movember-heading .mustache {
+  color: var(--gold);
+}
+.about-movember-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 26px;
+}
+.about-movember-grid p {
+  font-size: 12px;
+  line-height: 1.9;
+}
+.about-movember-grid a {
+  font-size: 12px;
+}
+.about-movember-giving {
+  padding: 22px;
+  background: #e9ecdf;
+  border: 1px solid #d5dccb;
+  border-radius: 8px;
+}
+.about-movember-giving h3 {
+  font-size: 23px;
+}
+.about-movember-giving .small {
+  font-size: 10px;
+  margin: 14px 0 0;
+}
+.about-movember-giving .button {
+  white-space: normal;
+  text-align: center;
+}
+@media (max-width: 600px) {
+  .about-movember-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .about-movember-heading h2 {
+    font-size: 24px;
+  }
+  .about-movember-heading .mustache {
+    width: 44px;
+  }
+  .about-movember-giving {
+    padding: 20px;
+  }
+}
