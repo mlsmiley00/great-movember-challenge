@@ -1851,3 +1851,23 @@ details[open] > summary {
     gap: 9px;
   }
 }
+.profile-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  min-height: 44px;
+}
+.profile-link:hover .avatar {
+  border-color: var(--gold);
+}
+.profile-link .username {
+  max-width: 200px;
+  overflow-wrap: anywhere;
+}
+.profile-panel {
+  max-width: 600px;
+}
+.greeting h2 {
+  overflow-wrap: anywhere;
+}

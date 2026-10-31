@@ -815,3 +815,189 @@ sqlTest("expired invitations do not create membership", async () => {
     await db.query("rollback");
   }
 });
+sqlTest(
+  "display name changes update only the caller and preserve membership settings and progress",
+  async () => {
+    await db.query("begin");
+    try {
+      const gid = await addGoal();
+      await db.query(
+        "insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,verification) values($1,$2,$3,'2026-11-01',10000,'honor')",
+        [cid, users.alice, gid],
+      );
+      const {
+        rows: [before],
+      } = await db.query(
+        "select * from public.memberships where competition_id=$1 and user_id=$2",
+        [cid, users.alice],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      await db.query(
+        "select public.update_display_name($1,'  María   López  ')",
+        [cid],
+      );
+      const {
+        rows: [after],
+      } = await db.query(
+        "select * from public.memberships where competition_id=$1 and user_id=$2",
+        [cid, users.alice],
+      );
+      assert.equal(after.display_name, "María López");
+      assert.deepEqual({ ...after, display_name: before.display_name }, before);
+      assert.equal(
+        (
+          await db.query(
+            "select display_name from public.individual_scores where user_id=$1",
+            [users.alice],
+          )
+        ).rows[0].display_name,
+        "María López",
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select display_name from public.memberships where user_id=$1",
+            [users.bob],
+          )
+        ).rows[0].display_name,
+        "bob",
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select * from public.progress_entries where goal_id=$1",
+            [gid],
+          )
+        ).rowCount,
+        1,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+sqlTest(
+  "display name updates reject blank, too short, too long, and null names",
+  async () => {
+    for (const name of ["", " ", "\t\n", "A", "x".repeat(61), null]) {
+      await asUser("alice", async () => {
+        await assert.rejects(
+          () =>
+            db.query("select public.update_display_name($1,$2)", [cid, name]),
+          /2 to 60/,
+        );
+      });
+    }
+  },
+);
+sqlTest(
+  "display name updates allow the maximum length and do not require unique names",
+  async () => {
+    await asUser("alice", async () => {
+      await db.query("select public.update_display_name($1,$2)", [
+        cid,
+        "x".repeat(60),
+      ]);
+      assert.equal(
+        (
+          await db.query(
+            "select display_name from public.memberships where user_id=$1",
+            [users.alice],
+          )
+        ).rows[0].display_name.length,
+        60,
+      );
+      await db.query("select public.update_display_name($1,'bob')", [cid]);
+      assert.equal(
+        (
+          await db.query(
+            "select * from public.memberships where display_name='bob'",
+          )
+        ).rowCount,
+        2,
+      );
+    });
+  },
+);
+sqlTest(
+  "nonmembers and unverified accounts cannot change display names",
+  async () => {
+    for (const name of ["outsider", "unverified"] as const)
+      await asUser(name, async () => {
+        await assert.rejects(
+          () =>
+            db.query("select public.update_display_name($1,'New name')", [cid]),
+          /Forbidden/,
+        );
+      });
+  },
+);
+sqlTest("suspended members cannot change display names", async () => {
+  await db.query("begin");
+  try {
+    await db.query(
+      "update public.memberships set status='suspended' where user_id=$1",
+      [users.alice],
+    );
+    await db.query("set local role authenticated");
+    await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+      users.alice,
+    ]);
+    await assert.rejects(
+      () => db.query("select public.update_display_name($1,'New name')", [cid]),
+      /Forbidden/,
+    );
+  } finally {
+    await db.query("rollback");
+  }
+});
+sqlTest("anonymous users cannot call the display name function", async () => {
+  await db.query("begin");
+  try {
+    await db.query("set local role anon");
+    await assert.rejects(
+      () => db.query("select public.update_display_name($1,'New name')", [cid]),
+      /permission denied/,
+    );
+  } finally {
+    await db.query("rollback");
+  }
+});
+sqlTest(
+  "display name changes do not modify another season membership",
+  async () => {
+    await db.query("begin");
+    try {
+      const otherCid = "20270000-0000-4000-8000-000000000001";
+      await db.query(
+        "insert into public.competitions values($1,'Future season','2027-11-01','2027-11-30')",
+        [otherCid],
+      );
+      await db.query(
+        "insert into public.memberships(competition_id,user_id,display_name) values($1,$2,'Future name')",
+        [otherCid, users.alice],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      await db.query("select public.update_display_name($1,'Current name')", [
+        cid,
+      ]);
+      assert.equal(
+        (
+          await db.query(
+            "select display_name from public.memberships where competition_id=$1 and user_id=$2",
+            [otherCid, users.alice],
+          )
+        ).rows[0].display_name,
+        "Future name",
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);

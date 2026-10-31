@@ -9,6 +9,7 @@ A private, English/Spanish wellness club for friends and family, November 1–30
 - Multiple measurable fitness/personal goals with weekday schedules, UTC daily logs, private screenshots (JPG/PNG/WebP, up to 3 MB), and honor reports.
 - Individual/team leaderboards, progress statistics, streaks, and earned milestones.
 - Family teams, activity feed, cheers, comments, announcements, and three configurable prizes.
+- Self-service display name updates under My profile, accessible from the avatar on any screen.
 - Admin invitations/revocation, member suspension/restoration, goal corrections, evidence review, prizes, and announcements.
 - Responsive barbershop styling, English/Spanish interface, installable web manifest. Deliberately no service worker or offline caching of private information.
 - Password recovery, security headers, no-store responses, checked upload signatures, and database integration tests.
@@ -26,6 +27,7 @@ In the SQL Editor, run these files in order:
 1. `supabase/migrations/202610310001_initial.sql`
 2. `supabase/migrations/202610310002_invitation_auth_hook.sql`
 3. `supabase/migrations/202610310003_allow_team_changes.sql`
+4. `supabase/migrations/202610310004_member_display_names.sql`
 
 Alternatively use the Supabase CLI's normal linked-project migration workflow. These migrations target a new project and are applied once. They do not add sample participants. They create the competition, three TBA prizes, the private screenshot bucket, policies, and RPCs.
 
@@ -66,7 +68,7 @@ Run `scripts/bootstrap-admin.sql` in the SQL Editor after replacing `:'admin_ema
 
 **Walk at least 10,000 steps every day, November 1–30, 2026.**
 
-It is safe to rerun and will not duplicate that goal. Return to the homepage and sign in. The bootstrap display name defaults to “Challenge Host”; change it in the membership row via the SQL Editor if desired.
+It is safe to rerun and will not duplicate that goal. Return to the homepage and sign in. The bootstrap display name defaults to “Challenge Host”; change it under **My profile** in the app.
 
 Now in **Authentication → Hooks → Before User Created**, select `public.before_user_created` and enable it. This is essential for invitation-only _account creation_. The database already blocks all competition access without membership, even if someone creates an account while the hook is disabled. After enabling, test that an arbitrary email/code cannot register. Do not disable the hook to fix regular invitations.
 
@@ -151,3 +153,9 @@ The app is implemented and can build without credentials, but it is not a live c
 ## Updating an existing deployment: flexible family teams
 
 If you already ran the first two migrations, run **only the contents** of `supabase/migrations/202610310003_allow_team_changes.sql` in **Supabase → SQL Editor → New query → Run**. Do not paste the filename or rerun the initial migration. The new migration is safe to rerun and preserves all existing members, teams, and progress. Vercel deploys the updated team-page guidance from `main`; applying this SQL is what removes the database restriction.
+
+## Updating an existing deployment: member display names
+
+After applying the previous migrations, copy the **contents** of `supabase/migrations/202610310004_member_display_names.sql` into a new Supabase SQL Editor query and run it. It is safe to rerun and does not change existing names. Do not rerun the initial migration. The updated interface deploys from `main` through Vercel.
+
+Each member can open **My profile** (or tap their avatar in the top bar), enter a 2–60 character name, and save. The name updates across the clubhouse greeting, rankings, progress feed, and comments, including past activity. Whitespace is normalized, and names do not have to be unique. Only the current member's name in this competition is updated; email, authentication, role, team, and progress cannot be changed through this function. Display names are public to other authorized club members, not to the internet.

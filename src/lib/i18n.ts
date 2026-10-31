@@ -12,6 +12,13 @@ export const copy = {
     teams: "Family teams",
     community: "The lounge",
     admin: "Administration",
+    profile: "My profile",
+    profileIntro: "Choose how your name appears throughout the club.",
+    nameHelp:
+      "Use 2–60 characters. Members will see this name in rankings, progress updates, and comments.",
+    nameSaved: "Your display name has been updated.",
+    nameInvalid: "Enter a display name with 2–60 characters.",
+    nameSaveError: "Your name could not be saved. Please try again.",
     logout: "Sign out",
     tagline: "Small steps. Great company.",
     subtitle:
@@ -95,6 +102,13 @@ export const copy = {
     teams: "Equipos familiares",
     community: "El salón",
     admin: "Administración",
+    profile: "Mi perfil",
+    profileIntro: "Elige cómo aparece tu nombre en todo el club.",
+    nameHelp:
+      "Usa entre 2 y 60 caracteres. Los miembros verán este nombre en la clasificación, los avances y los comentarios.",
+    nameSaved: "Tu nombre visible se ha actualizado.",
+    nameInvalid: "Introduce un nombre visible de entre 2 y 60 caracteres.",
+    nameSaveError: "No se pudo guardar tu nombre. Inténtalo de nuevo.",
     logout: "Cerrar sesión",
     tagline: "Pequeños pasos. Gran compañía.",
     subtitle: "Treinta días para cuidarte. Un mes inolvidable juntos.",

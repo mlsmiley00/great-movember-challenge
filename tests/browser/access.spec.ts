@@ -48,6 +48,7 @@ test("every private route sends anonymous visitors to sign-in", async ({
     "/teams",
     "/community",
     "/admin",
+    "/profile",
     "/join",
     "/evidence/10000000-0000-4000-8000-000000000001",
   ]) {

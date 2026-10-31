@@ -6,6 +6,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { supabase, configured } from "@/lib/supabase/server";
 import { admin, member, COMPETITION } from "@/lib/auth";
+import { translations } from "@/lib/i18n";
 const text = (f: FormData, key: string) => String(f.get(key) || "").trim();
 function fail(path: string, message: string): never {
   redirect(
@@ -358,4 +359,18 @@ export async function revokeInvite(f: FormData) {
   });
   if (error) fail("/admin", error.message);
   success("/admin");
+}
+
+export async function updateDisplayName(f: FormData) {
+  const { db } = await member();
+  const t = await translations();
+  const name = text(f, "name").replace(/\s+/gu, " ");
+  const parsed = z.string().min(2).max(60).safeParse(name);
+  if (!parsed.success) fail("/profile", t.nameInvalid);
+  const { error } = await db.rpc("update_display_name", {
+    cid: COMPETITION,
+    chosen_name: parsed.data,
+  });
+  if (error) fail("/profile", t.nameSaveError);
+  success("/profile", t.nameSaved);
 }

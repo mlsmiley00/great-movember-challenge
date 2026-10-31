@@ -118,7 +118,7 @@ export default async function Dashboard({
         <div>
           <p className="eyebrow">YOUR PERSONAL SCORECARD</p>
           <h2>
-            {t.welcome}, {membership.display_name.split(" ")[0]}{" "}
+            {t.welcome}, {membership.display_name}{" "}
             <span className="wave">✦</span>
           </h2>
         </div>

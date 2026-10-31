@@ -8,6 +8,7 @@ import {
   MessagesSquare,
   Shield,
   LogOut,
+  UserRound,
 } from "lucide-react";
 import { member } from "@/lib/auth";
 import { translations } from "@/lib/i18n";
@@ -51,6 +52,10 @@ export default async function PrivateLayout({
               {label}
             </Link>
           ))}
+          <Link href="/profile">
+            <UserRound size={18} />
+            {t.profile}
+          </Link>
           {membership.role === "admin" && (
             <Link href="/admin">
               <Shield size={18} />
@@ -86,10 +91,16 @@ export default async function PrivateLayout({
           </span>
           <div className="topbar-right">
             <Language />
-            <span className="avatar">
-              {membership.display_name.slice(0, 1).toUpperCase()}
-            </span>
-            <span className="username">{membership.display_name}</span>
+            <Link
+              href="/profile"
+              className="profile-link"
+              aria-label={t.profile}
+            >
+              <span className="avatar" aria-hidden="true">
+                {membership.display_name.slice(0, 1).toUpperCase()}
+              </span>
+              <span className="username">{membership.display_name}</span>
+            </Link>
           </div>
         </header>
         <div className="content">
@@ -114,6 +125,7 @@ export default async function PrivateLayout({
           </Link>
         </nav>
         <div className="mobile-account">
+          <Link href="/profile">{t.profile}</Link>
           <form action={signOut}>
             <button className="text-button">{t.logout}</button>
           </form>
