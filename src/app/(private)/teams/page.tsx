@@ -21,8 +21,8 @@ export default async function Teams({
       <PageTitle eyebrow="BETTER TOGETHER" title={t.teams}>
         <p>
           {lang === "en"
-            ? "Bring your family. Build your momentum. Choose your team before your first progress entry."
-            : "Invita a tu familia. Elige tu equipo antes de registrar tu primer avance."}
+            ? "Bring your family. Build your momentum. You can join or change teams through November 30, even after logging progress. Your progress stays with you."
+            : "Invita a tu familia. Puedes unirte o cambiar de equipo hasta el 30 de noviembre, incluso después de registrar avances. Conservas tu progreso."}
         </p>
       </PageTitle>
       <Notice searchParams={searchParams} />
@@ -46,7 +46,13 @@ export default async function Teams({
                     className="secondary"
                     disabled={membership.team_id === team.id}
                   >
-                    {membership.team_id === team.id ? "✓" : t.join}
+                    {membership.team_id === team.id
+                      ? lang === "en"
+                        ? "Your team ✓"
+                        : "Tu equipo ✓"
+                      : lang === "en"
+                        ? "Join team"
+                        : "Unirme al equipo"}
                   </button>
                 </form>
               </article>

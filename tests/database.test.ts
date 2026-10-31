@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import pg from "pg";
 const url = process.env.TEST_DATABASE_URL;
 const cid = "20260000-0000-4000-8000-000000000001";
@@ -12,10 +12,6 @@ const users = {
   unverified: "10000000-0000-4000-8000-000000000005",
 };
 const db = new pg.Client({ connectionString: url });
-const migration = new URL(
-  "../supabase/migrations/202610310001_initial.sql",
-  import.meta.url,
-);
 before(async () => {
   if (!url) return;
   const u = new URL(url);
@@ -38,16 +34,17 @@ before(async () => {
  grant usage on schema public,auth,storage to anon,authenticated;
  grant select,insert,delete on storage.objects to authenticated;
  grant execute on function auth.uid(),storage.foldername(text) to anon,authenticated;`);
-  await db.query(await readFile(migration, "utf8"));
-  await db.query(
-    await readFile(
-      new URL(
-        "../supabase/migrations/202610310002_invitation_auth_hook.sql",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
+  const migrationsDirectory = new URL(
+    "../supabase/migrations/",
+    import.meta.url,
   );
+  for (const filename of (await readdir(migrationsDirectory))
+    .filter((f) => f.endsWith(".sql"))
+    .sort()) {
+    await db.query(
+      await readFile(new URL(filename, migrationsDirectory), "utf8"),
+    );
+  }
   for (const [name, id] of Object.entries(users))
     await db.query("insert into auth.users values($1,$2,$3)", [
       id,
@@ -618,21 +615,165 @@ sqlTest(
     }
   },
 );
-sqlTest("team choice locks after first progress record", async () => {
+sqlTest(
+  "members can create, switch and leave teams after logging without losing progress",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set starts_on=current_date,ends_on=current_date where id=$1",
+        [cid],
+      );
+      const gid = await addGoal();
+      await db.query(
+        "insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,verification) values($1,$2,$3,current_date,10000,'honor')",
+        [cid, users.alice, gid],
+      );
+      const {
+        rows: [other],
+      } = await db.query(
+        "insert into public.teams(competition_id,name,created_by) values($1,'Other family',$2) returning id",
+        [cid, users.bob],
+      );
+      await db.query(
+        "update public.memberships set team_id=$1 where user_id=$2",
+        [other.id, users.bob],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      await db.query("select public.create_team($1,'My new family')", [cid]);
+      const teamId = (
+        await db.query(
+          "select team_id from public.memberships where user_id=$1",
+          [users.alice],
+        )
+      ).rows[0].team_id;
+      assert.ok(teamId);
+      assert.equal(
+        Number(
+          (
+            await db.query("select score from public.team_scores where id=$1", [
+              teamId,
+            ])
+          ).rows[0].score,
+        ),
+        100,
+      );
+      await db.query("select public.join_team($1,$2)", [cid, other.id]);
+      const joined = (
+        await db.query("select * from public.team_scores where id=$1", [
+          other.id,
+        ])
+      ).rows[0];
+      assert.equal(joined.member_count, 2);
+      assert.equal(Number(joined.score), 50);
+      assert.equal(
+        (
+          await db.query(
+            "select member_count from public.team_scores where id=$1",
+            [teamId],
+          )
+        ).rows[0].member_count,
+        0,
+      );
+      await db.query("select public.join_team($1,null)", [cid]);
+      assert.equal(
+        (
+          await db.query(
+            "select team_id from public.memberships where user_id=$1",
+            [users.alice],
+          )
+        ).rows[0].team_id,
+        null,
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select member_count from public.team_scores where id=$1",
+            [other.id],
+          )
+        ).rows[0].member_count,
+        1,
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select * from public.progress_entries where goal_id=$1",
+            [gid],
+          )
+        ).rowCount,
+        1,
+      );
+      assert.equal(
+        Number(
+          (
+            await db.query(
+              "select score from public.individual_scores where user_id=$1",
+              [users.alice],
+            )
+          ).rows[0].score,
+        ),
+        100,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+sqlTest("nonmembers still cannot change team membership", async () => {
+  await asUser("outsider", async () => {
+    await assert.rejects(
+      () => db.query("select public.join_team($1,null)", [cid]),
+      /Forbidden/,
+    );
+  });
+});
+sqlTest("members cannot join another competition's team", async () => {
   await db.query("begin");
   try {
-    const gid = await addGoal();
     await db.query(
-      "insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,verification) values($1,$2,$3,'2026-11-01',0,'honor')",
-      [cid, users.alice, gid],
+      "update public.competitions set starts_on=current_date,ends_on=current_date where id=$1",
+      [cid],
+    );
+    const otherCid = "20270000-0000-4000-8000-000000000001";
+    await db.query(
+      "insert into public.competitions values($1,'Another competition',current_date,current_date)",
+      [otherCid],
+    );
+    const {
+      rows: [other],
+    } = await db.query(
+      "insert into public.teams(competition_id,name,created_by) values($1,'Other season',$2) returning id",
+      [otherCid, users.bob],
     );
     await db.query("set local role authenticated");
     await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
       users.alice,
     ]);
     await assert.rejects(
-      () => db.query("select public.create_team($1,'New family')", [cid]),
-      /locks after/,
+      () => db.query("select public.join_team($1,$2)", [cid, other.id]),
+      /Invalid team/,
+    );
+  } finally {
+    await db.query("rollback");
+  }
+});
+sqlTest("team changes still close after the competition ends", async () => {
+  await db.query("begin");
+  try {
+    await db.query(
+      "update public.competitions set starts_on=current_date-30,ends_on=current_date-1 where id=$1",
+      [cid],
+    );
+    await db.query("set local role authenticated");
+    await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+      users.alice,
+    ]);
+    await assert.rejects(
+      () => db.query("select public.join_team($1,null)", [cid]),
+      /Team registration is closed/,
     );
   } finally {
     await db.query("rollback");

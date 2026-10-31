@@ -25,6 +25,7 @@ In the SQL Editor, run these files in order:
 
 1. `supabase/migrations/202610310001_initial.sql`
 2. `supabase/migrations/202610310002_invitation_auth_hook.sql`
+3. `supabase/migrations/202610310003_allow_team_changes.sql`
 
 Alternatively use the Supabase CLI's normal linked-project migration workflow. These migrations target a new project and are applied once. They do not add sample participants. They create the competition, three TBA prizes, the private screenshot bucket, policies, and RPCs.
 
@@ -94,7 +95,7 @@ Pending screenshots and honor reports count provisionally; rejected reports coun
 
 Goal details lock when created. New goals are allowed through November 30, but their full scheduled November history counts, including missed days before joining. Maximum ten goals/member. Admin corrections recalculate historical scores; announce corrections to members. The scoring formula is fixed in the migration, not editable via arbitrary admin input.
 
-Choose a family team before your first progress entry; team changes then lock to prevent moving scores between teams. A team is visible/joinable by all authorized club members; it is not a separate private subgroup. Suspended members are removed from rankings and team averages. Equal rounded scores share rank; final prize ties need an administrator decision. The three prizes initially say “To Be Announced.”
+Members can create, join, leave, or change family teams through November 30 (UTC), including after logging progress. Progress entries and individual scores are preserved; team averages immediately reflect current membership. After the competition ends, team changes close to preserve final standings. A team is visible/joinable by all authorized club members; it is not a separate private subgroup. Suspended members are removed from rankings and team averages. Equal rounded scores share rank; final prize ties need an administrator decision. The three prizes initially say “To Be Announced.”
 
 Streaks count consecutive UTC days with at least one non-rejected goal meeting its target; multiple goals on the same day count once. Today's streak can include yesterday until today is completed. Off-schedule days break a streak; this is distinct from schedule-normalized consistency. Badges: first successful day, current seven-day streak, 15 distinct successful days, 30 successful November days. Current streak badges are not permanent historical awards.
 
@@ -146,3 +147,7 @@ Before inviting everyone, use two real member accounts plus the admin:
 6. Suspend a test member and verify access is revoked. Check all three prizes and publish the launch announcement.
 
 The app is implemented and can build without credentials, but it is not a live competition until Supabase is configured, its signup hook and external email delivery are enabled, Vercel is deployed, and these live checks pass.
+
+## Updating an existing deployment: flexible family teams
+
+If you already ran the first two migrations, run **only the contents** of `supabase/migrations/202610310003_allow_team_changes.sql` in **Supabase → SQL Editor → New query → Run**. Do not paste the filename or rerun the initial migration. The new migration is safe to rerun and preserves all existing members, teams, and progress. Vercel deploys the updated team-page guidance from `main`; applying this SQL is what removes the database restriction.
