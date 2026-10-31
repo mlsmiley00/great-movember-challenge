@@ -1,0 +1,68 @@
+import { redirect } from "next/navigation";
+import { configured, supabase } from "@/lib/supabase/server";
+import { translations } from "@/lib/i18n";
+import { acceptInvitation, signOut, updatePassword } from "../actions";
+import { Language, Mustache, Notice } from "../ui";
+export default async function Join({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  if (!configured()) redirect("/login");
+  const db = await supabase();
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  if (!user) redirect("/login");
+  const t = await translations();
+  const p = await searchParams;
+  return (
+    <main className="auth-card">
+      <Language />
+      <Mustache />
+      <h1>{p.recovery ? t.updatePassword : t.accept}</h1>
+      <Notice searchParams={searchParams} />
+      {p.recovery ? (
+        <form action={updatePassword} className="stack">
+          <label>
+            {t.choosePassword}
+            <input
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              minLength={12}
+              maxLength={128}
+              required
+            />
+          </label>
+          <button>{t.save}</button>
+        </form>
+      ) : (
+        <>
+          <p>{user.email}</p>
+          <p>{t.consent}</p>
+          <form action={acceptInvitation} className="stack">
+            <label>
+              {t.name}
+              <input
+                name="name"
+                minLength={2}
+                maxLength={60}
+                defaultValue={user.user_metadata.display_name || ""}
+                required
+              />
+            </label>
+            <label>
+              {t.invite}
+              <input name="token" minLength={32} maxLength={128} required />
+            </label>
+            <button>{t.accept}</button>
+          </form>
+        </>
+      )}
+      <form action={signOut}>
+        <button className="text-button">{t.logout}</button>
+      </form>
+    </main>
+  );
+}
