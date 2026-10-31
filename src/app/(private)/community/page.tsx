@@ -41,7 +41,7 @@ export default async function Community({
     ? await db.from("reactions").select("*").in("entry_id", ids).limit(3000)
     : { data: [], error: null };
   if (comments.error || reactions.error)
-    throw new Error("Unable to load lounge");
+    throw new Error("Unable to load activity feed");
   return (
     <>
       <PageTitle eyebrow="CHEER EACH OTHER ON" title={t.community}>
