@@ -1932,3 +1932,46 @@ details[open] > summary {
     padding: 20px;
   }
 }
+.goal-view-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.goal-view-nav a {
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  text-decoration: none;
+  min-height: 44px;
+}
+.goal-view-nav a[aria-current="page"] {
+  background: var(--green);
+  color: var(--paper);
+  border-color: var(--green);
+}
+.member-goals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+.member-goals-grid .panel {
+  margin-bottom: 0;
+}
+.member-goals-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+.member-goals-grid .goal-card h3 {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .member-goals-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}

@@ -43,6 +43,7 @@ test("every private route sends anonymous visitors to sign-in", async ({
   for (const path of [
     "/",
     "/goals",
+    "/goals?view=members",
     "/log",
     "/leaderboard",
     "/teams",

@@ -159,3 +159,7 @@ If you already ran the first two migrations, run **only the contents** of `supab
 After applying the previous migrations, copy the **contents** of `supabase/migrations/202610310004_member_display_names.sql` into a new Supabase SQL Editor query and run it. It is safe to rerun and does not change existing names. Do not rerun the initial migration. The updated interface deploys from `main` through Vercel.
 
 Each member can open **My profile** (or tap their avatar in the top bar), enter a 2–60 character name, and save. The name updates across the clubhouse greeting, rankings, progress feed, and comments, including past activity. Whitespace is normalized, and names do not have to be unique. Only the current member's name in this competition is updated; email, authentication, role, team, and progress cannot be changed through this function. Display names are public to other authorized club members, not to the internet.
+
+## Browsing members’ goals
+
+Open **My goals → Everyone’s goals** (Spanish: **Mis metas → Metas de todos**) to see active members grouped by display name, including their goals, targets, UTC weekday schedules, completion counts, and scores. Members without goals have an empty-state message. This view is read-only and uses the existing competition-scoped row-level security; screenshots and their storage paths are never queried or displayed. No migration is needed. **My goals** still contains the current member’s goals and creation form.

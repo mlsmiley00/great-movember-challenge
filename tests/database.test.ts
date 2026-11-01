@@ -1001,3 +1001,38 @@ sqlTest(
     }
   },
 );
+sqlTest(
+  "active members can browse another member’s goals and schedules within their competition",
+  async () => {
+    await db.query("begin");
+    try {
+      const gid = await addGoal(users.bob);
+      await db.query(
+        "update public.goals set weekdays=array[1,3,5] where id=$1",
+        [gid],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      const {
+        rows: [goal],
+      } = await db.query("select * from public.goal_scores where id=$1", [gid]);
+      assert.equal(goal.user_id, users.bob);
+      assert.equal(goal.title, "Steps");
+      assert.equal(Number(goal.target), 10000);
+      assert.deepEqual(goal.weekdays, [1, 3, 5]);
+      assert.equal(
+        (
+          await db.query(
+            "select display_name from public.memberships where user_id=$1",
+            [users.bob],
+          )
+        ).rows[0].display_name,
+        "bob",
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);

@@ -22,6 +22,13 @@ export const copy = {
     movemberExternal:
       "Opens the official Movember website. Donations are handled there, not through this app.",
     goals: "My goals",
+    everyoneGoals: "Everyone’s goals",
+    everyoneGoalsIntro:
+      "See what everyone is working toward and cheer each other on.",
+    goalViews: "Goal views",
+    memberNoGoals: "No goals added yet.",
+    goalsPrivacy:
+      "Visible to active club members only. Screenshots remain private to their owners and administrators.",
     log: "Log progress",
     leaderboard: "Rankings",
     teams: "Family teams",
@@ -127,6 +134,13 @@ export const copy = {
     movemberExternal:
       "Abre la web oficial de Movember. Las donaciones se realizan allí, no en esta aplicación.",
     goals: "Mis metas",
+    everyoneGoals: "Metas de todos",
+    everyoneGoalsIntro:
+      "Descubre las metas de los demás y anímense mutuamente.",
+    goalViews: "Vistas de metas",
+    memberNoGoals: "Todavía no hay metas.",
+    goalsPrivacy:
+      "Solo los miembros activos del club pueden ver esta información. Las capturas siguen siendo privadas para sus propietarios y administradores.",
     log: "Registrar avance",
     leaderboard: "Clasificación",
     teams: "Equipos familiares",
