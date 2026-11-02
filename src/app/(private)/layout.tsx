@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NavigationLink } from "../navigation-link";
 import {
   Home,
   Target,
@@ -47,20 +48,20 @@ export default async function PrivateLayout({
         <p className="sidebar-label">THE MEMBERS’ CLUB</p>
         <nav>
           {links.map(([href, label, Icon]) => (
-            <Link href={href} key={href}>
+            <NavigationLink href={href} key={href}>
               <Icon size={18} />
               {label}
-            </Link>
+            </NavigationLink>
           ))}
-          <Link href="/profile">
+          <NavigationLink href="/profile">
             <UserRound size={18} />
             {t.profile}
-          </Link>
+          </NavigationLink>
           {membership.role === "admin" && (
-            <Link href="/admin">
+            <NavigationLink href="/admin">
               <Shield size={18} />
               {t.admin}
-            </Link>
+            </NavigationLink>
           )}
         </nav>
         <div className="sidebar-bottom">
@@ -114,22 +115,24 @@ export default async function PrivateLayout({
         </div>
         <nav className="mobile-nav">
           {links.slice(0, 5).map(([href, label, Icon]) => (
-            <Link key={href} href={href}>
+            <NavigationLink key={href} href={href}>
               <Icon size={20} />
               <span>{label}</span>
-            </Link>
+            </NavigationLink>
           ))}
-          <Link href="/community">
+          <NavigationLink href="/community">
             <MessagesSquare size={20} />
             <span>{t.community}</span>
-          </Link>
+          </NavigationLink>
         </nav>
         <div className="mobile-account">
-          <Link href="/profile">{t.profile}</Link>
+          <NavigationLink href="/profile">{t.profile}</NavigationLink>
           <form action={signOut}>
             <button className="text-button">{t.logout}</button>
           </form>
-          {membership.role === "admin" && <Link href="/admin">{t.admin}</Link>}
+          {membership.role === "admin" && (
+            <NavigationLink href="/admin">{t.admin}</NavigationLink>
+          )}
         </div>
       </div>
     </div>
