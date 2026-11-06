@@ -10,8 +10,12 @@ import {
 import Link from "next/link";
 import { member, COMPETITION } from "@/lib/auth";
 import { translations, locale } from "@/lib/i18n";
-import { streak } from "@/lib/scoring";
-import { achievements } from "@/lib/achievements";
+import { progressDates } from "@/lib/scoring";
+import {
+  ProgressDay,
+  ProgressStreak,
+  ProgressAchievements,
+} from "../progress-streak";
 import { Mustache, Meter, Empty, Go, Notice } from "../ui";
 export default async function Dashboard({
   searchParams,
@@ -56,17 +60,13 @@ export default async function Dashboard({
     (r) => r.data || [],
   );
   const mine = ranks.find((r) => r.user_id === user.id);
-  const today = new Date().toISOString().slice(0, 10);
   const completed = entries.filter(
     (e) =>
       e.verification !== "rejected" &&
       Number(e.value) >=
         Number(goals.find((g) => g.id === e.goal_id)?.target || Infinity),
   );
-  const currentStreak = streak(
-    completed.map((e) => e.logged_on),
-    today > "2026-11-30" ? "2026-11-30" : today,
-  );
+  const dates = progressDates(entries);
   const rank = mine
     ? 1 + ranks.filter((r) => Number(r.score) > Number(mine.score)).length
     : null;
@@ -75,7 +75,7 @@ export default async function Dashboard({
     Math.ceil((Date.parse("2026-12-01T00:00:00Z") - Date.now()) / 86400000),
   );
   return (
-    <>
+    <ProgressDay>
       <Notice searchParams={searchParams} />
       <section className="hero">
         <div className="hero-copy">
@@ -147,10 +147,10 @@ export default async function Dashboard({
           </span>
           <span>{t.streak}</span>
           <strong>
-            {currentStreak}
+            <ProgressStreak dates={dates} />
             <small>{t.days}</small>
           </strong>
-          <small>{t.trophy}</small>
+          <small>{t.streakHelp}</small>
         </div>
         <div className="stat">
           <span className="stat-icon gold">
@@ -262,27 +262,11 @@ export default async function Dashboard({
           <h2>{t.achievement}</h2>
           <span>✦</span>
         </div>
-        <div className="achievement-grid">
-          {achievements(
-            completed.map((e) => e.logged_on),
-            currentStreak,
-          ).map((a) => (
-            <div
-              className={a.earned ? "achievement earned" : "achievement"}
-              key={a.id}
-            >
-              <span>{a.symbol}</span>
-              <b>{lang === "en" ? a.en : a.es}</b>
-              <small>
-                {a.earned
-                  ? "✓"
-                  : lang === "en"
-                    ? "Keep going"
-                    : "Sigue adelante"}
-              </small>
-            </div>
-          ))}
-        </div>
+        <ProgressAchievements
+          completedDates={completed.map((e) => e.logged_on)}
+          dates={dates}
+          lang={lang}
+        />
       </section>
       <section className="prize-section">
         <div className="section-heading">
@@ -331,6 +315,6 @@ export default async function Dashboard({
           <p>{t.ruleText}</p>
         </section>
       </div>
-    </>
+    </ProgressDay>
   );
 }

@@ -39,3 +39,29 @@ export function streak(dates: string[], asOf: string): number {
   }
   return n;
 }
+
+// Activity dates, not submission timestamps, determine daily participation.
+export function progressDates(
+  entries: ReadonlyArray<{
+    logged_on: string;
+    value: number | string;
+    verification: string;
+  }>,
+) {
+  return [
+    ...new Set(
+      entries
+        .filter((entry) => {
+          const value = Number(entry.value);
+          return (
+            entry.verification !== "rejected" &&
+            Number.isFinite(value) &&
+            value > 0 &&
+            entry.logged_on >= START &&
+            entry.logged_on <= END
+          );
+        })
+        .map((entry) => entry.logged_on),
+    ),
+  ];
+}

@@ -70,3 +70,68 @@ test("achievements require real distinct successful days", () => {
     4,
   );
 });
+
+import { progressDates } from "../src/lib/scoring";
+test("partial positive progress counts without meeting a target", () => {
+  const dates = progressDates([
+    { logged_on: "2026-11-01", value: 1, verification: "honor" },
+    { logged_on: "2026-11-02", value: "0.5", verification: "pending" },
+    { logged_on: "2026-11-03", value: 20, verification: "verified" },
+  ]);
+  assert.equal(streak(dates, "2026-11-03"), 3);
+});
+test("backfilling a missed activity date restores the full streak regardless of when it was submitted", () => {
+  const entries = [
+    {
+      logged_on: "2026-11-01",
+      value: 1,
+      verification: "honor",
+      created_at: "2026-11-01T12:00:00Z",
+    },
+    {
+      logged_on: "2026-11-03",
+      value: 1,
+      verification: "honor",
+      created_at: "2026-11-03T12:00:00Z",
+    },
+  ];
+  assert.equal(streak(progressDates(entries), "2026-11-03"), 1);
+  entries.push({
+    logged_on: "2026-11-02",
+    value: 1,
+    verification: "honor",
+    created_at: "2026-11-06T12:00:00Z",
+  });
+  assert.equal(streak(progressDates(entries), "2026-11-03"), 3);
+  assert.equal(streak(progressDates(entries), "2026-11-04"), 3);
+  assert.equal(streak(progressDates(entries), "2026-11-06"), 0);
+});
+test("duplicate goal logs, zero amounts, rejected reports and noncompetition dates do not inflate streaks", () => {
+  const entries = [
+    { logged_on: "2026-11-01", value: 1, verification: "honor" },
+    { logged_on: "2026-11-01", value: 99, verification: "verified" },
+    { logged_on: "2026-11-02", value: 0, verification: "honor" },
+    { logged_on: "2026-11-02", value: 99, verification: "rejected" },
+    { logged_on: "2026-10-31", value: 1, verification: "honor" },
+    { logged_on: "2026-12-01", value: 1, verification: "honor" },
+    { logged_on: "2026-11-02", value: "invalid", verification: "honor" },
+  ];
+  assert.deepEqual(progressDates(entries), ["2026-11-01"]);
+  assert.equal(streak(progressDates(entries), "2026-11-02"), 1);
+});
+test("the seven-day badge uses participation while target-based score remains unchanged", () => {
+  const dates = progressDates(
+    Array.from({ length: 7 }, (_, i) => ({
+      logged_on: `2026-11-0${i + 1}`,
+      value: 1,
+      verification: "honor",
+    })),
+  );
+  assert.equal(streak(dates, "2026-11-07"), 7);
+  assert.equal(
+    achievements([], streak(dates, "2026-11-07")).find((a) => a.id === "week")
+      ?.earned,
+    true,
+  );
+  assert.equal(goalScore(goal([{ value: 5000 }], 1)), 35);
+});

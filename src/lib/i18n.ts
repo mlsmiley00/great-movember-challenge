@@ -103,6 +103,8 @@ export const copy = {
     submit: "Record progress",
     score: "Score",
     streak: "Streak",
+    streakHelp:
+      "Any positive progress counts once per activity date. Logging a missed day later restores the streak. Today uses your device’s timezone.",
     days: "days",
     prizes: "The winners’ circle",
     tba: "To Be Announced",
@@ -273,6 +275,8 @@ export const copy = {
     submit: "Registrar avance",
     score: "Puntuación",
     streak: "Racha",
+    streakHelp:
+      "Cualquier progreso positivo cuenta una vez por fecha de actividad. Registrar un día olvidado restaura la racha. Hoy se calcula en la zona horaria de tu dispositivo.",
     days: "días",
     prizes: "El podio",
     tba: "Por anunciar",

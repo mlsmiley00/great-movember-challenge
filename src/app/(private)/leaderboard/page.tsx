@@ -1,6 +1,7 @@
 import { member, COMPETITION } from "@/lib/auth";
 import { translations } from "@/lib/i18n";
-import { streak } from "@/lib/scoring";
+import { progressDates } from "@/lib/scoring";
+import { ProgressDay, ProgressStreak } from "../../progress-streak";
 import { PageTitle, Empty } from "../../ui";
 export default async function Leaderboard() {
   const { db, user } = await member();
@@ -23,14 +24,11 @@ export default async function Leaderboard() {
       .select("user_id,logged_on,value,goal_id,verification")
       .eq("competition_id", COMPETITION)
       .neq("verification", "rejected"),
-    db.from("goals").select("id,target").eq("competition_id", COMPETITION),
   ]);
   for (const r of results) if (r.error) throw r.error;
-  const [people, teams, entries, goals] = results.map((r) => r.data || []);
-  const today = new Date().toISOString().slice(0, 10);
-  const asOf = today > "2026-11-30" ? "2026-11-30" : today;
+  const [people, teams, entries] = results.map((r) => r.data || []);
   return (
-    <>
+    <ProgressDay>
       <PageTitle eyebrow="A LITTLE FRIENDLY COMPETITION" title={t.leaderboard}>
         <p>{t.rankingNote}</p>
       </PageTitle>
@@ -38,6 +36,7 @@ export default async function Leaderboard() {
         <h2>
           {t.leaderboard} · {t.members}
         </h2>
+        <p className="small muted">{t.streakHelp}</p>
         {people.length ? (
           <div className="table-scroll">
             <table>
@@ -72,20 +71,11 @@ export default async function Leaderboard() {
                       <small> /100</small>
                     </td>
                     <td>
-                      {streak(
-                        entries
-                          .filter(
-                            (e) =>
-                              e.user_id === p.user_id &&
-                              Number(e.value) >=
-                                Number(
-                                  goals.find((g) => g.id === e.goal_id)
-                                    ?.target || Infinity,
-                                ),
-                          )
-                          .map((e) => e.logged_on),
-                        asOf,
-                      )}{" "}
+                      <ProgressStreak
+                        dates={progressDates(
+                          entries.filter((e) => e.user_id === p.user_id),
+                        )}
+                      />{" "}
                       🔥
                     </td>
                     <td>{p.completed_days}</td>
@@ -138,6 +128,6 @@ export default async function Leaderboard() {
         <h2>{t.rules}</h2>
         <p>{t.ruleText}</p>
       </section>
-    </>
+    </ProgressDay>
   );
 }
