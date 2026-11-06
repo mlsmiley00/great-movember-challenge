@@ -30,7 +30,7 @@ test("English and Spanish switch the document and registration form", async ({
     page.getByRole("heading", { name: "Bienvenido al club" }),
   ).toBeVisible();
   await page.locator("summary").filter({ hasText: "Únete al reto" }).click();
-  await expect(page.getByLabel("Código de invitación")).toBeVisible();
+  await expect(page.getByLabel("Código de invitación")).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Crear cuenta" }),
   ).toBeDisabled();

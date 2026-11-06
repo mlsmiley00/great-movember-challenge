@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     new URL(
       "/login?error=" +
         encodeURIComponent(
-          "This email link could not be opened. Older reset links must be opened in the browser that requested them. Request a new link if it expired or was already used. / No se pudo abrir el enlace. Los enlaces antiguos deben abrirse en el navegador que los solicitó. Solicita uno nuevo si caducó o ya se usó.",
+          "This email link could not be opened. If you just verified your email, try signing in. For a password reset, request a new email and use the newest link. / No se pudo abrir el enlace. Si acabas de verificar tu correo, intenta iniciar sesión. Para restablecer la contraseña, solicita otro correo y usa el enlace más reciente.",
         ),
       origin,
     ),

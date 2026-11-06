@@ -1,8 +1,9 @@
-import { translations } from "@/lib/i18n";
-import { configured } from "@/lib/supabase/server";
+import { translations, locale } from "@/lib/i18n";
+import { configured, supabase } from "@/lib/supabase/server";
 import { signIn, signUp, requestReset } from "../actions";
 import { Language, Mustache, Notice } from "../ui";
 import { PasswordField } from "../password-field";
+import { BotCheck } from "../bot-check";
 export default async function Login({
   searchParams,
 }: {
@@ -10,6 +11,21 @@ export default async function Login({
 }) {
   const t = await translations();
   const ready = configured();
+  const lang = await locale();
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  let open = false;
+  if (ready && siteKey) {
+    const db = await supabase();
+    const result = await db.rpc("public_registration_open");
+    open = !result.error && result.data === true;
+  }
+  const botProps = {
+    siteKey,
+    language: lang,
+    label: t.botCheck,
+    errorLabel: t.botError,
+    retryLabel: t.retry,
+  };
   return (
     <main className="login">
       <div className="login-brand">
@@ -51,9 +67,9 @@ export default async function Login({
             hideLabel={t.hidePassword}
             autoComplete="current-password"
           />
-          <button disabled={!ready}>
+          <BotCheck {...botProps} disabled={!ready}>
             {t.login} <span>↗</span>
-          </button>
+          </BotCheck>
         </form>
         <details>
           <summary>
@@ -82,21 +98,14 @@ export default async function Login({
               minLength={12}
             />
             <small>12–128 characters / caracteres</small>
-            <label>
-              {t.invite}
-              <input
-                name="token"
-                minLength={32}
-                maxLength={128}
-                autoComplete="off"
-                required
-              />
-            </label>
             <label className="check">
               <input name="consent" type="checkbox" value="yes" required />
               <span>{t.consent}</span>
             </label>
-            <button disabled={!ready}>{t.signup}</button>
+            {!open && <p className="notice">{t.signupUnavailable}</p>}
+            <BotCheck {...botProps} disabled={!ready || !open}>
+              {t.signup}
+            </BotCheck>
             <small>{t.checkEmail}</small>
           </form>
         </details>
@@ -110,7 +119,9 @@ export default async function Login({
               {t.email}
               <input type="email" name="email" required />
             </label>
-            <button disabled={!ready}>{t.reset}</button>
+            <BotCheck {...botProps} disabled={!ready}>
+              {t.reset}
+            </BotCheck>
           </form>
         </details>
         <p className="footnote">

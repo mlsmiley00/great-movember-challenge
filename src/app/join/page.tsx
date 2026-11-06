@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { configured, supabase } from "@/lib/supabase/server";
 import { translations } from "@/lib/i18n";
-import { acceptInvitation, signOut, updatePassword } from "../actions";
+import { joinPublicCompetition, signOut, updatePassword } from "../actions";
 import { Language, Mustache, Notice } from "../ui";
 import { PasswordField } from "../password-field";
 import { AuthSubmit } from "../auth-submit";
@@ -22,7 +22,7 @@ export default async function Join({
     <main className="auth-card">
       <Language />
       <Mustache />
-      <h1>{p.recovery ? t.updatePassword : t.accept}</h1>
+      <h1>{p.recovery ? t.updatePassword : t.join}</h1>
       <Notice searchParams={searchParams} />
       {p.recovery ? (
         <form action={updatePassword} className="stack">
@@ -48,7 +48,7 @@ export default async function Join({
         <>
           <p>{user.email}</p>
           <p>{t.consent}</p>
-          <form action={acceptInvitation} className="stack">
+          <form action={joinPublicCompetition} className="stack">
             <label>
               {t.name}
               <input
@@ -59,11 +59,11 @@ export default async function Join({
                 required
               />
             </label>
-            <label>
-              {t.invite}
-              <input name="token" minLength={32} maxLength={128} required />
+            <label className="check">
+              <input name="consent" type="checkbox" value="yes" required />
+              <span>{t.consent}</span>
             </label>
-            <button>{t.accept}</button>
+            <AuthSubmit>{t.join}</AuthSubmit>
           </form>
         </>
       )}

@@ -112,7 +112,7 @@ export const copy = {
     noGoals: "Set your first goal to begin your November story.",
     challenge: "The Great Movember Challenge",
     dates: "November 1–30, 2026",
-    private: "Private club · By invitation only",
+    private: "Members’ club · Email verification required",
     rules: "How the score works",
     ruleText:
       "70% goal completion + 30% consistency. Fitness goals count twice. Your goals are averaged, so adding more goals gives no automatic advantage. Teams use the average of all their members. Missed days count as zero. Scores use scheduled days through today; final standings include all 30 days. Schedules and standings use UTC; the progress form defaults to your local date.",
@@ -120,8 +120,18 @@ export const copy = {
     back: "Back to the clubhouse",
     noData: "No entries yet. The next step is yours.",
     signup: "Create account",
+    botCheck: "Bot protection",
+    botError:
+      "The security check could not load. Please retry or check your connection.",
+    retry: "Retry",
+    signupUnavailable:
+      "New registration is not available yet. Please try again later.",
+    signupInvalid:
+      "Check your name, email, password (12–128 characters), consent, and security check, then try again.",
+    joinError:
+      "You must verify your email and accept the privacy terms to join. If your account is suspended, contact an administrator.",
     checkEmail:
-      "Check your email to verify your account, then sign in and accept your invitation.",
+      "Check your email to verify your account, then sign in. Membership is automatic; no invitation or approval is needed.",
     accept: "Accept invitation",
     settings:
       "Set up Supabase to open the club. See README.md for the secure setup steps.",
@@ -262,7 +272,7 @@ export const copy = {
     noGoals: "Crea tu primera meta para empezar tu historia de noviembre.",
     challenge: "El Gran Reto Movember",
     dates: "1–30 de noviembre de 2026",
-    private: "Club privado · Solo por invitación",
+    private: "Club de miembros · Verificación de correo requerida",
     rules: "Cómo se calcula la puntuación",
     ruleText:
       "70 % cumplimiento + 30 % constancia. Las metas físicas cuentan el doble. Se calcula el promedio de tus metas, sin ventaja por añadir más. Los equipos usan el promedio de todos sus miembros. Los días omitidos valen cero. Se cuentan los días programados hasta hoy; el resultado final incluye todo noviembre. Los horarios y la clasificación usan UTC; el formulario de progreso muestra tu fecha local.",
@@ -270,8 +280,18 @@ export const copy = {
     back: "Volver al club",
     noData: "Aún no hay registros. El siguiente paso es tuyo.",
     signup: "Crear cuenta",
+    botCheck: "Protección contra bots",
+    botError:
+      "No se pudo cargar la comprobación de seguridad. Reintenta o revisa tu conexión.",
+    retry: "Reintentar",
+    signupUnavailable:
+      "El registro aún no está disponible. Inténtalo más tarde.",
+    signupInvalid:
+      "Revisa tu nombre, correo, contraseña (12–128 caracteres), consentimiento y comprobación de seguridad.",
+    joinError:
+      "Verifica tu correo y acepta las condiciones de privacidad para unirte. Si tu cuenta está suspendida, contacta con un administrador.",
     checkEmail:
-      "Revisa tu correo para verificar tu cuenta. Después inicia sesión y acepta la invitación.",
+      "Revisa tu correo para verificar tu cuenta y luego inicia sesión. La membresía es automática; no necesitas invitación ni aprobación.",
     accept: "Aceptar invitación",
     settings:
       "Configura Supabase para abrir el club. Consulta README.md para los pasos seguros.",

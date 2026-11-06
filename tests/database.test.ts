@@ -25,7 +25,7 @@ before(async () => {
   await db.connect();
   await db.query(`drop schema if exists public cascade; drop schema if exists auth cascade; drop schema if exists storage cascade; drop schema if exists extensions cascade; create schema public; create schema auth; create schema storage; create schema extensions;
  do $$ begin if not exists(select 1 from pg_roles where rolname='supabase_auth_admin') then create role supabase_auth_admin nologin; end if; if not exists(select 1 from pg_roles where rolname='anon') then create role anon nologin; end if; if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated nologin; end if; end $$;
- create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
+ create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,raw_user_meta_data jsonb not null default '{}');
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
  create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text unique);
@@ -43,7 +43,7 @@ before(async () => {
     .sort()) {
     if (filename === "202611060002_honor_system_default.sql") {
       await db.query(`
-        insert into auth.users values('90000000-0000-4000-8000-000000000001','migration@example.com',now());
+        insert into auth.users(id,email,email_confirmed_at) values('90000000-0000-4000-8000-000000000001','migration@example.com',now());
         insert into public.memberships(competition_id,user_id,display_name) values('${cid}','90000000-0000-4000-8000-000000000001','Migration fixture');
         insert into public.goals(id,competition_id,user_id,title,category,target,unit) values('90000000-0000-4000-8000-000000000002','${cid}','90000000-0000-4000-8000-000000000001','Migration goal','fitness',10000,'steps');
         insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,notes,verification)
@@ -74,11 +74,10 @@ before(async () => {
     }
   }
   for (const [name, id] of Object.entries(users))
-    await db.query("insert into auth.users values($1,$2,$3)", [
-      id,
-      name + "@example.com",
-      name === "unverified" ? null : new Date(),
-    ]);
+    await db.query(
+      "insert into auth.users(id,email,email_confirmed_at) values($1,$2,$3)",
+      [id, name + "@example.com", name === "unverified" ? null : new Date()],
+    );
   for (const name of ["admin", "alice", "bob"] as const)
     await db.query(
       "insert into public.memberships(competition_id,user_id,display_name,role) values($1,$2,$3,$4)",
@@ -1571,6 +1570,238 @@ sqlTest(
       await assert.rejects(
         () => db.query("select public.set_progress_review($1,true)", [cid]),
         /permission denied/,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "public registration is closed by default and exposes only its availability to anonymous visitors",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query("set local role anon");
+      assert.equal(
+        (await db.query("select public.public_registration_open() as open"))
+          .rows[0].open,
+        false,
+      );
+      await assert.rejects(
+        () => db.query("select public.join_public_competition('Visitor',true)"),
+        /permission denied/,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+sqlTest(
+  "open signup hook requires a name and explicit consent instead of an invitation",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set public_registration_enabled=true where id=$1",
+        [cid],
+      );
+      for (const metadata of [
+        {},
+        { display_name: "A", club_consent: true },
+        { display_name: "Person", club_consent: "true" },
+        { display_name: "Person", club_consent: false },
+      ]) {
+        const {
+          rows: [result],
+        } = await db.query(
+          "select public.before_user_created($1::jsonb) as result",
+          [
+            JSON.stringify({
+              user: { email: "new@example.test", user_metadata: metadata },
+            }),
+          ],
+        );
+        assert.equal(result.result.error.http_code, 403);
+      }
+      const {
+        rows: [result],
+      } = await db.query(
+        "select public.before_user_created($1::jsonb) as result",
+        [
+          JSON.stringify({
+            user: {
+              email: "new@example.test",
+              user_metadata: {
+                display_name: "New member",
+                club_consent: true,
+                role: "admin",
+              },
+            },
+          }),
+        ],
+      );
+      assert.deepEqual(result.result, {});
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+sqlTest(
+  "email verification automatically grants ordinary membership, never metadata-supplied privileges",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set public_registration_enabled=true where id=$1",
+        [cid],
+      );
+      const uid = "70000000-0000-4000-8000-000000000001";
+      await db.query(
+        "insert into auth.users(id,email,raw_user_meta_data) values($1,'new@example.test',$2::jsonb)",
+        [
+          uid,
+          JSON.stringify({
+            display_name: "  New   member  ",
+            club_consent: true,
+            role: "admin",
+            status: "active",
+            competition_id: "forged",
+          }),
+        ],
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select count(*)::int as n from public.memberships where user_id=$1",
+            [uid],
+          )
+        ).rows[0].n,
+        0,
+      );
+      await db.query(
+        "update auth.users set email_confirmed_at=now() where id=$1",
+        [uid],
+      );
+      assert.deepEqual(
+        (
+          await db.query(
+            "select competition_id,display_name,role,status from public.memberships where user_id=$1",
+            [uid],
+          )
+        ).rows,
+        [
+          {
+            competition_id: cid,
+            display_name: "New member",
+            role: "member",
+            status: "active",
+          },
+        ],
+      );
+      await db.query(
+        "update auth.users set email_confirmed_at=now() where id=$1",
+        [uid],
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select count(*)::int as n from public.memberships where user_id=$1",
+            [uid],
+          )
+        ).rows[0].n,
+        1,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+sqlTest(
+  "verified legacy accounts can join without invitations but unverified users cannot",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set public_registration_enabled=true where id=$1",
+        [cid],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.unverified,
+      ]);
+      await db.query("savepoint unverified");
+      await assert.rejects(
+        () =>
+          db.query("select public.join_public_competition('Unverified',true)"),
+        /Verify your email/,
+      );
+      await db.query("rollback to savepoint unverified");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.outsider,
+      ]);
+      await db.query("savepoint consent");
+      await assert.rejects(
+        () =>
+          db.query("select public.join_public_competition('New member',false)"),
+        /consent required/,
+      );
+      await db.query("rollback to savepoint consent");
+      await db.query(
+        "select public.join_public_competition('New member',true)",
+      );
+      await db.query(
+        "select public.join_public_competition('New member',true)",
+      );
+      assert.deepEqual(
+        (
+          await db.query(
+            "select role,status from public.memberships where user_id=$1",
+            [users.outsider],
+          )
+        ).rows,
+        [{ role: "member", status: "active" }],
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+sqlTest(
+  "automatic enrollment and self-service enrollment cannot reactivate suspended members",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set public_registration_enabled=true where id=$1",
+        [cid],
+      );
+      await db.query(
+        "update public.memberships set status='suspended' where user_id=$1",
+        [users.alice],
+      );
+      await db.query(
+        "update auth.users set raw_user_meta_data='{" +
+          '"display_name":"Alice","club_consent":true,"role":"admin"' +
+          "}'::jsonb,email_confirmed_at=now() where id=$1",
+        [users.alice],
+      );
+      assert.deepEqual(
+        (
+          await db.query(
+            "select role,status from public.memberships where user_id=$1",
+            [users.alice],
+          )
+        ).rows,
+        [{ role: "member", status: "suspended" }],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      await assert.rejects(
+        () => db.query("select public.join_public_competition('Alice',true)"),
+        /suspended/,
       );
     } finally {
       await db.query("rollback");

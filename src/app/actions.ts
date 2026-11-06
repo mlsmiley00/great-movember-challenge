@@ -7,6 +7,7 @@ import { z } from "zod";
 import { supabase, configured } from "@/lib/supabase/server";
 import { admin, member, COMPETITION } from "@/lib/auth";
 import { translations } from "@/lib/i18n";
+import { publicSignup, captchaToken } from "@/lib/signup";
 import { verifyRecovery, validPasswordPair } from "@/lib/password-recovery";
 const text = (f: FormData, key: string) => String(f.get(key) || "").trim();
 function fail(path: string, message: string): never {
@@ -42,6 +43,7 @@ export async function signIn(f: FormData) {
   const { error } = await db.auth.signInWithPassword({
     email: text(f, "email"),
     password: String(f.get("password") || ""),
+    options: { captchaToken: captchaToken(f) },
   });
   if (error)
     fail(
@@ -51,46 +53,44 @@ export async function signIn(f: FormData) {
   redirect("/");
 }
 export async function signUp(f: FormData) {
-  if (!configured()) fail("/login", "Supabase is not configured");
-  const result = z
-    .object({
-      email: z.email(),
-      password: z.string().min(12).max(128),
-      name: z.string().min(2).max(60),
-      token: z.string().min(32).max(128),
-    })
-    .safeParse({
-      email: text(f, "email"),
-      password: String(f.get("password") || ""),
-      name: text(f, "name"),
-      token: text(f, "token"),
-    });
+  const t = await translations();
+  if (!configured() || !process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+    fail("/login", t.signupUnavailable);
+  const result = publicSignup.safeParse({
+    email: text(f, "email"),
+    password: String(f.get("password") || ""),
+    name: text(f, "name"),
+    captchaToken: captchaToken(f),
+  });
   if (!result.success || f.get("consent") !== "yes")
-    fail(
-      "/login",
-      "Check your details, invitation code, password (12+ characters), and privacy consent. / Revisa tus datos, código, contraseña (12+ caracteres) y consentimiento.",
-    );
+    fail("/login", t.signupInvalid);
   const db = await supabase();
+  const { data: open, error: statusError } = await db.rpc(
+    "public_registration_open",
+  );
+  if (statusError || open !== true) fail("/login", t.signupUnavailable);
   const { error } = await db.auth.signUp({
     email: result.data.email,
     password: result.data.password,
     options: {
+      captchaToken: result.data.captchaToken,
       emailRedirectTo: site() + "/auth/callback",
-      data: {
-        display_name: result.data.name,
-        invitation_token: result.data.token,
-      },
+      data: { display_name: result.data.name, club_consent: true },
     },
   });
-  if (error)
-    fail(
-      "/login",
-      "Registration could not be completed. Try again or contact your administrator. / No se pudo completar el registro.",
-    );
-  success(
-    "/login",
-    "Check your email to verify your account. / Revisa tu correo para verificar tu cuenta.",
-  );
+  if (error) fail("/login", t.signupInvalid);
+  success("/login", t.checkEmail);
+}
+export async function joinPublicCompetition(f: FormData) {
+  const t = await translations();
+  if (!configured()) fail("/login", t.signupUnavailable);
+  const db = await supabase();
+  const { error } = await db.rpc("join_public_competition", {
+    chosen_name: text(f, "name"),
+    consented: f.get("consent") === "yes",
+  });
+  if (error) fail("/join", t.joinError);
+  success("/");
 }
 export async function acceptInvitation(f: FormData) {
   const db = await supabase();
@@ -127,6 +127,7 @@ export async function requestReset(f: FormData) {
     // Retain compatibility with older email templates while the new direct
     // token-hash template uses the canonical Site URL and confirmation page.
     redirectTo: site() + "/auth/callback?next=/join?recovery=1",
+    captchaToken: captchaToken(f),
   });
   if (error) fail("/login", t.resetRequestError);
   success(
