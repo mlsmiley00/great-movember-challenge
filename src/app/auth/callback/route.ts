@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
   }
   return NextResponse.redirect(
     new URL(
-      "/login?error=Email+link+expired.+Please+sign+in+or+request+a+new+link.",
+      "/login?error=" +
+        encodeURIComponent(
+          "This email link could not be opened. Older reset links must be opened in the browser that requested them. Request a new link if it expired or was already used. / No se pudo abrir el enlace. Los enlaces antiguos deben abrirse en el navegador que los solicitó. Solicita uno nuevo si caducó o ya se usó.",
+        ),
       origin,
     ),
   );

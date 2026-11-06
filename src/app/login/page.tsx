@@ -2,6 +2,7 @@ import { translations } from "@/lib/i18n";
 import { configured } from "@/lib/supabase/server";
 import { signIn, signUp, requestReset } from "../actions";
 import { Language, Mustache, Notice } from "../ui";
+import { PasswordField } from "../password-field";
 export default async function Login({
   searchParams,
 }: {
@@ -44,15 +45,12 @@ export default async function Login({
             {t.email}
             <input type="email" name="email" autoComplete="email" required />
           </label>
-          <label>
-            {t.password}
-            <input
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-            />
-          </label>
+          <PasswordField
+            label={t.password}
+            showLabel={t.showPassword}
+            hideLabel={t.hidePassword}
+            autoComplete="current-password"
+          />
           <button disabled={!ready}>
             {t.login} <span>↗</span>
           </button>
@@ -76,18 +74,14 @@ export default async function Login({
               {t.email}
               <input type="email" name="email" autoComplete="email" required />
             </label>
-            <label>
-              {t.password}
-              <input
-                type="password"
-                name="password"
-                minLength={12}
-                maxLength={128}
-                autoComplete="new-password"
-                required
-              />
-              <small>12+ characters / caracteres</small>
-            </label>
+            <PasswordField
+              label={t.password}
+              showLabel={t.showPassword}
+              hideLabel={t.hidePassword}
+              autoComplete="new-password"
+              minLength={12}
+            />
+            <small>12–128 characters / caracteres</small>
             <label>
               {t.invite}
               <input

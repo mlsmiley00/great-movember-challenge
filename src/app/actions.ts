@@ -7,6 +7,7 @@ import { z } from "zod";
 import { supabase, configured } from "@/lib/supabase/server";
 import { admin, member, COMPETITION } from "@/lib/auth";
 import { translations } from "@/lib/i18n";
+import { verifyRecovery, validPasswordPair } from "@/lib/password-recovery";
 const text = (f: FormData, key: string) => String(f.get(key) || "").trim();
 function fail(path: string, message: string): never {
   redirect(
@@ -119,30 +120,48 @@ export async function signOut() {
 export async function requestReset(f: FormData) {
   if (!configured()) fail("/login", "Supabase is not configured");
   const db = await supabase();
-  await db.auth.resetPasswordForEmail(text(f, "email"), {
+  const t = await translations();
+  const email = text(f, "email");
+  if (!z.email().safeParse(email).success) fail("/login", t.resetRequestError);
+  const { error } = await db.auth.resetPasswordForEmail(email, {
+    // Retain compatibility with older email templates while the new direct
+    // token-hash template uses the canonical Site URL and confirmation page.
     redirectTo: site() + "/auth/callback?next=/join?recovery=1",
   });
+  if (error) fail("/login", t.resetRequestError);
   success(
     "/login",
     "If that account exists, a recovery email has been sent. / Si existe la cuenta, recibirás un correo de recuperación.",
   );
 }
+export async function confirmRecovery(f: FormData) {
+  const t = await translations();
+  if (!configured()) fail("/login", t.recoveryInvalid);
+  const db = await supabase();
+  const verified = await verifyRecovery(f.get("token_hash"), async (input) => {
+    const { data, error } = await db.auth.verifyOtp(input);
+    return {
+      error: error || (!data.session ? new Error("No recovery session") : null),
+    };
+  });
+  if (!verified) fail("/login", t.recoveryInvalid);
+  // Always remove the one-time token from the destination URL.
+  redirect("/join?recovery=1");
+}
 export async function updatePassword(f: FormData) {
+  const t = await translations();
   const value = String(f.get("password") || "");
-  if (value.length < 12 || value.length > 128)
-    fail("/join?recovery=1", "Use 12–128 characters / Usa 12–128 caracteres");
+  const confirmation = String(f.get("password_confirmation") || "");
+  if (!validPasswordPair(value, confirmation))
+    fail("/join?recovery=1", t.passwordMismatch);
   const db = await supabase();
   const {
     data: { user },
   } = await db.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) fail("/login", t.recoveryInvalid);
   const { error } = await db.auth.updateUser({ password: value });
-  if (error)
-    fail(
-      "/join",
-      "Unable to change password / No se pudo cambiar la contraseña",
-    );
-  success("/");
+  if (error) fail("/join?recovery=1", t.passwordSaveError);
+  success("/", t.passwordSaved);
 }
 export async function createGoal(f: FormData) {
   const { db } = await member();

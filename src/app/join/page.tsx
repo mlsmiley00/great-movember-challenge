@@ -3,6 +3,8 @@ import { configured, supabase } from "@/lib/supabase/server";
 import { translations } from "@/lib/i18n";
 import { acceptInvitation, signOut, updatePassword } from "../actions";
 import { Language, Mustache, Notice } from "../ui";
+import { PasswordField } from "../password-field";
+import { AuthSubmit } from "../auth-submit";
 export default async function Join({
   searchParams,
 }: {
@@ -24,18 +26,23 @@ export default async function Join({
       <Notice searchParams={searchParams} />
       {p.recovery ? (
         <form action={updatePassword} className="stack">
-          <label>
-            {t.choosePassword}
-            <input
-              type="password"
-              name="password"
-              autoComplete="new-password"
-              minLength={12}
-              maxLength={128}
-              required
-            />
-          </label>
-          <button>{t.save}</button>
+          <PasswordField
+            label={t.choosePassword}
+            showLabel={t.showPassword}
+            hideLabel={t.hidePassword}
+            autoComplete="new-password"
+            minLength={12}
+          />
+          <PasswordField
+            label={t.confirmPassword}
+            showLabel={t.showPassword}
+            hideLabel={t.hidePassword}
+            name="password_confirmation"
+            autoComplete="new-password"
+            minLength={12}
+          />
+          <small>{t.passwordHelp}</small>
+          <AuthSubmit>{t.save}</AuthSubmit>
         </form>
       ) : (
         <>

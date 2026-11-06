@@ -2010,3 +2010,34 @@ details[open] > summary {
 .goal-removal button {
   background: var(--red);
 }
+
+.password-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.password-control {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.password-control input {
+  min-width: 0;
+  flex: 1;
+  width: 0;
+}
+.password-control button {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  min-height: 44px;
+}
+@media (max-width: 400px) {
+  .password-control {
+    flex-wrap: wrap;
+  }
+  .password-control input {
+    flex-basis: 100%;
+    width: 100%;
+  }
+}

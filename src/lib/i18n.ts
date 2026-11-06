@@ -62,6 +62,22 @@ export const copy = {
     login: "Sign in",
     email: "Email address",
     password: "Password",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+    confirmPassword: "Repeat new password",
+    passwordHelp:
+      "Use 12–128 characters. Both passwords must match. You can show either field to check what you typed.",
+    passwordMismatch: "Enter matching passwords with 12–128 characters.",
+    passwordSaveError:
+      "Could not save your password. Please try again. If your session expired, request a new reset email.",
+    passwordSaved: "Your password has been updated.",
+    recoveryContinue: "Continue to reset password",
+    recoveryContinueHelp:
+      "Select Continue to open the secure password form. Opening this page alone does not use your reset link.",
+    recoveryInvalid:
+      "This reset link is invalid, expired, or already used. Request a new reset email from Forgot password below.",
+    resetRequestError:
+      "Could not request a reset email. Check the email address and try again shortly.",
     name: "Display name",
     invite: "Invitation code",
     save: "Save",
@@ -195,6 +211,23 @@ export const copy = {
     login: "Iniciar sesión",
     email: "Correo electrónico",
     password: "Contraseña",
+    showPassword: "Mostrar contraseña",
+    hidePassword: "Ocultar contraseña",
+    confirmPassword: "Repite la nueva contraseña",
+    passwordHelp:
+      "Usa entre 12 y 128 caracteres. Ambas contraseñas deben coincidir. Puedes mostrar cada campo para comprobar lo que escribiste.",
+    passwordMismatch:
+      "Introduce contraseñas iguales de entre 12 y 128 caracteres.",
+    passwordSaveError:
+      "No se pudo guardar la contraseña. Inténtalo de nuevo. Si la sesión caducó, solicita otro correo de recuperación.",
+    passwordSaved: "Tu contraseña se ha actualizado.",
+    recoveryContinue: "Continuar para restablecer la contraseña",
+    recoveryContinueHelp:
+      "Selecciona Continuar para abrir el formulario seguro. Abrir esta página no consume el enlace de recuperación.",
+    recoveryInvalid:
+      "Este enlace no es válido, ha caducado o ya se ha usado. Solicita otro correo desde ¿Olvidaste la contraseña? abajo.",
+    resetRequestError:
+      "No se pudo solicitar el correo. Comprueba la dirección e inténtalo de nuevo en unos momentos.",
     name: "Nombre visible",
     invite: "Código de invitación",
     save: "Guardar",
