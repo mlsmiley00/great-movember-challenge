@@ -71,7 +71,7 @@ export default async function Community({
                           ?.display_name
                       }
                     </b>
-                    <small>{e.logged_on} · UTC</small>
+                    <small>{e.logged_on}</small>
                   </div>
                   {complete && (
                     <span className="pill">

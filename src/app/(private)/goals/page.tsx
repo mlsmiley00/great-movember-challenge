@@ -3,6 +3,7 @@ import { member, COMPETITION } from "@/lib/auth";
 import { translations, locale } from "@/lib/i18n";
 import { PageTitle, Notice, Empty, Meter } from "../../ui";
 import { GoalForm } from "../../goal-form";
+import { removeGoal } from "../../actions";
 
 type Goal = {
   id: string;
@@ -73,6 +74,22 @@ export default async function Goals({
           {g.completed_days}/{g.scheduled_days} {t.days} ·{" "}
           {Number(g.score).toFixed(1)} / 100
         </p>
+        {!everyone && (
+          <details className="goal-removal">
+            <summary>
+              {t.removeGoal}: {g.title}
+            </summary>
+            <form action={removeGoal} className="stack">
+              <input type="hidden" name="goal" value={g.id} />
+              <p>{t.goalRemoveWarning}</p>
+              <label>
+                <input type="checkbox" name="confirm" value="yes" required />{" "}
+                {t.goalRemoveConfirm}
+              </label>
+              <button className="danger">{t.removeGoal}</button>
+            </form>
+          </details>
+        )}
       </article>
     );
   }

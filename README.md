@@ -82,7 +82,7 @@ Participants register using that email/code, verify the Supabase email, and sign
 
 ## Rules and scoring
 
-All dates are UTC, including members in other time zones. Logs must fall on a goal's scheduled weekday within November, never a future UTC date. Missing scheduled days are zero. Reporting closes at **December 3, 2026 00:00 UTC**, allowing 48 hours after November ends. Amounts can be zero and exceed the target, but over-target amounts give no extra points.
+Schedules and score cutoffs use UTC. The progress form defaults to today's calendar date in the member's device timezone and submits that timezone for server validation. Logs must fall on a goal's scheduled weekday within November, never a future date in the submitted timezone. Earlier scheduled competition days can be logged to catch up, including days before the goal was created. Missing scheduled days are zero. Reporting closes at **December 3, 2026 00:00 UTC**, allowing 48 hours after November ends. Amounts can be zero and exceed the target, but over-target amounts give no extra points.
 
 For each goal, across scheduled days from November 1 through today (capped at November 30):
 
@@ -163,3 +163,11 @@ Each member can open **My profile** (or tap their avatar in the top bar), enter 
 ## Browsing members’ goals
 
 Open **My goals → Everyone’s goals** (Spanish: **Mis metas → Metas de todos**) to see active members grouped by display name, including their goals, targets, UTC weekday schedules, completion counts, and scores. Members without goals have an empty-state message. This view is read-only and uses the existing competition-scoped row-level security; screenshots and their storage paths are never queried or displayed. No migration is needed. **My goals** still contains the current member’s goals and creation form.
+
+## Local progress dates and removing accidental goals
+
+Apply only `supabase/migrations/202611060001_progress_dates_and_goal_removal.sql` after the existing core migrations. It is independent of the optional chat migration and requires no new credentials or Supabase configuration changes. The original five-argument `record_progress` API remains compatible and uses UTC; the new six-argument API validates the supplied IANA timezone and calculates its current date on the server. The browser sends its actual timezone and uses local-calendar date parts rather than slicing a UTC ISO timestamp. The form updates its date bounds on focus and every 30 seconds; manually selected past dates are preserved. Future local dates, off-schedule dates, dates outside the competition, and edits to reviewed entries are still rejected. The reporting deadline remains December 3 at 00:00 UTC (end of December 2 UTC).
+
+On **My goals**, expand **Remove goal**, read the warning, check the confirmation box, and submit. Only a verified active member can remove a goal they own; administrators cannot use this member action to remove someone else's goal. Everyone's goals has no removal controls. Removal permanently deletes the goal and all linked progress, comments, reactions, and evidence metadata in one transaction; individual and team score views then recalculate. This also removes any reviewed progress associated with that goal. Screenshots are cleaned up afterward through the existing owner-only orphan-file policy; a cleanup failure displays a notice and leaves only private orphaned files for administrator cleanup. No individual progress-entry removal control is added.
+
+Both logging and removal lock the goal row to serialize concurrent operations. Removal is a user-confirmed destructive action, not a change made automatically to any member's existing goals. No existing dates are rewritten, and no live data is modified by preparing this change.

@@ -186,12 +186,25 @@ export async function recordProgress(f: FormData) {
       day: z.iso.date(),
       amount: z.coerce.number().min(0).max(1e9),
       notes: z.string().max(1000),
+      timezone: z
+        .string()
+        .min(1)
+        .max(100)
+        .refine((zone) => {
+          try {
+            new Intl.DateTimeFormat("en", { timeZone: zone });
+            return true;
+          } catch {
+            return false;
+          }
+        }),
     })
     .safeParse({
       gid: text(f, "goal"),
       day: text(f, "date"),
       amount: f.get("value"),
       notes: text(f, "notes"),
+      timezone: text(f, "timezone") || "UTC",
     });
   if (!parsed.success)
     fail(
@@ -236,6 +249,7 @@ export async function recordProgress(f: FormData) {
     amount: p.amount,
     entry_notes: p.notes,
     screenshot_path: path,
+    reporting_timezone: p.timezone,
   });
   if (error) {
     if (path) await db.storage.from("progress-evidence").remove([path]);
@@ -243,6 +257,31 @@ export async function recordProgress(f: FormData) {
   }
   success("/log");
 }
+export async function removeGoal(f: FormData) {
+  const { db } = await member();
+  const t = await translations();
+  const gid = text(f, "goal");
+  if (!z.uuid().safeParse(gid).success || text(f, "confirm") !== "yes")
+    fail("/goals", t.goalRemoveError);
+  const { data, error } = await db.rpc("remove_own_goal", { gid });
+  if (error) fail("/goals", t.goalRemoveError);
+  // Metadata is removed transactionally first. Existing storage policies permit
+  // the owner to clean up only screenshots that are no longer referenced.
+  let cleanupFailed = false;
+  if (Array.isArray(data) && data.length) {
+    try {
+      const { error: cleanupError } = await db.storage
+        .from("progress-evidence")
+        .remove(data);
+      cleanupFailed = Boolean(cleanupError);
+    } catch {
+      cleanupFailed = true;
+    }
+  }
+  if (cleanupFailed) success("/goals", t.goalRemovedCleanup);
+  success("/goals", t.goalRemoved);
+}
+
 export async function createTeam(f: FormData) {
   const { db } = await member();
   const { error } = await db.rpc("create_team", {

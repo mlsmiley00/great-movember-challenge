@@ -1983,3 +1983,30 @@ details[open] > summary {
     gap: 16px;
   }
 }
+
+.goal-removal {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.goal-removal summary {
+  color: var(--red);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.goal-removal form {
+  margin-top: 12px;
+}
+.goal-removal label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.goal-removal input[type="checkbox"] {
+  width: auto;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.goal-removal button {
+  background: var(--red);
+}

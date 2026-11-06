@@ -22,6 +22,18 @@ export const copy = {
     movemberExternal:
       "Opens the official Movember website. Donations are handled there, not through this app.",
     goals: "My goals",
+    removeGoal: "Remove goal",
+    goalRemoveWarning:
+      "This permanently removes this goal and all its progress, screenshots, comments, and reactions. Your scores and rankings will be recalculated. This cannot be undone.",
+    goalRemoveConfirm:
+      "I understand and want to remove this goal and its progress.",
+    goalRemoveError:
+      "The goal could not be removed. Confirm the removal and try again. You can remove only your own goals.",
+    goalRemoved: "Your goal and its progress have been removed.",
+    goalRemovedCleanup:
+      "Your goal and progress have been removed. Some screenshot files could not be cleaned up; contact an administrator.",
+    catchUpHelp:
+      "Choose today or an earlier scheduled day in November to catch up. Today uses your device’s timezone. You can report November activity until the end of December 2 (UTC). Saving an unreviewed goal on the same date replaces its existing entry and screenshot.",
     everyoneGoals: "Everyone’s goals",
     everyoneGoalsIntro:
       "See what everyone is working toward and cheer each other on.",
@@ -87,7 +99,7 @@ export const copy = {
     private: "Private club · By invitation only",
     rules: "How the score works",
     ruleText:
-      "70% goal completion + 30% consistency. Fitness goals count twice. Your goals are averaged, so adding more goals gives no automatic advantage. Teams use the average of all their members. Missed days count as zero. Scores use scheduled days through today; final standings include all 30 days. All dates use UTC.",
+      "70% goal completion + 30% consistency. Fitness goals count twice. Your goals are averaged, so adding more goals gives no automatic advantage. Teams use the average of all their members. Missed days count as zero. Scores use scheduled days through today; final standings include all 30 days. Schedules and standings use UTC; the progress form defaults to your local date.",
     progress: "Your November, one day at a time.",
     back: "Back to the clubhouse",
     noData: "No entries yet. The next step is yours.",
@@ -134,6 +146,17 @@ export const copy = {
     movemberExternal:
       "Abre la web oficial de Movember. Las donaciones se realizan allí, no en esta aplicación.",
     goals: "Mis metas",
+    removeGoal: "Eliminar meta",
+    goalRemoveWarning:
+      "Se eliminarán permanentemente esta meta y todos sus registros, capturas, comentarios y reacciones. Se recalcularán tus puntuaciones y la clasificación. Esta acción no se puede deshacer.",
+    goalRemoveConfirm: "Entiendo y quiero eliminar esta meta y sus registros.",
+    goalRemoveError:
+      "No se pudo eliminar la meta. Confirma la eliminación e inténtalo de nuevo. Solo puedes eliminar tus propias metas.",
+    goalRemoved: "Se han eliminado tu meta y sus registros.",
+    goalRemovedCleanup:
+      "Se han eliminado tu meta y sus registros. No se pudieron borrar algunos archivos de capturas; contacta con un administrador.",
+    catchUpHelp:
+      "Elige hoy o un día programado anterior de noviembre para ponerte al día. Hoy se calcula en la zona horaria de tu dispositivo. Puedes registrar actividades de noviembre hasta el final del 2 de diciembre (UTC). Guardar una meta sin revisar en la misma fecha reemplaza su registro y captura.",
     everyoneGoals: "Metas de todos",
     everyoneGoalsIntro:
       "Descubre las metas de los demás y anímense mutuamente.",
@@ -198,7 +221,7 @@ export const copy = {
     private: "Club privado · Solo por invitación",
     rules: "Cómo se calcula la puntuación",
     ruleText:
-      "70 % cumplimiento + 30 % constancia. Las metas físicas cuentan el doble. Se calcula el promedio de tus metas, sin ventaja por añadir más. Los equipos usan el promedio de todos sus miembros. Los días omitidos valen cero. Se cuentan los días programados hasta hoy; el resultado final incluye todo noviembre. Las fechas usan UTC.",
+      "70 % cumplimiento + 30 % constancia. Las metas físicas cuentan el doble. Se calcula el promedio de tus metas, sin ventaja por añadir más. Los equipos usan el promedio de todos sus miembros. Los días omitidos valen cero. Se cuentan los días programados hasta hoy; el resultado final incluye todo noviembre. Los horarios y la clasificación usan UTC; el formulario de progreso muestra tu fecha local.",
     progress: "Tu noviembre, un día a la vez.",
     back: "Volver al club",
     noData: "Aún no hay registros. El siguiente paso es tuyo.",

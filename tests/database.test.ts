@@ -1036,3 +1036,333 @@ sqlTest(
     }
   },
 );
+
+sqlTest(
+  "members can catch up on scheduled past days, including before their goal was created",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set starts_on=current_date-40,ends_on=current_date+3 where id=$1",
+        [cid],
+      );
+      const gid = await addGoal();
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      const {
+        rows: [entry],
+      } = await db.query(
+        "select public.record_progress($1,current_date-7,7000,'Catching up',null,'America/Chicago') as id",
+        [gid],
+      );
+      const {
+        rows: [saved],
+      } = await db.query(
+        "select notes,value,logged_on::text from public.progress_entries where id=$1",
+        [entry.id],
+      );
+      assert.equal(saved.notes, "Catching up");
+      assert.equal(Number(saved.value), 7000);
+      await db.query(
+        "select public.record_progress($1,current_date-7,8000,'Corrected',null,'America/Chicago')",
+        [gid],
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select count(*)::int as n from public.progress_entries where goal_id=$1",
+            [gid],
+          )
+        ).rows[0].n,
+        1,
+      );
+      assert.equal(
+        Number(
+          (
+            await db.query(
+              "select value from public.progress_entries where id=$1",
+              [entry.id],
+            )
+          ).rows[0].value,
+        ),
+        8000,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "reporting timezone accepts local today and rejects local tomorrow, invalid zones, and unscheduled days",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set starts_on=current_date-40,ends_on=current_date+3 where id=$1",
+        [cid],
+      );
+      const gid = await addGoal();
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      for (const zone of [
+        "America/Chicago",
+        "Pacific/Kiritimati",
+        "Pacific/Honolulu",
+      ]) {
+        await db.query(
+          "select public.record_progress($1,(now() at time zone $2)::date,10000,'',null,$2)",
+          [gid, zone],
+        );
+        await db.query("savepoint future_day");
+        await assert.rejects(
+          () =>
+            db.query(
+              "select public.record_progress($1,(now() at time zone $2)::date+1,10000,'',null,$2)",
+              [gid, zone],
+            ),
+          /Not a scheduled/,
+        );
+        await db.query("rollback to savepoint future_day");
+      }
+      await db.query("savepoint invalid_zone");
+      await assert.rejects(
+        () =>
+          db.query(
+            "select public.record_progress($1,current_date,10000,'',null,'not-a-timezone')",
+            [gid],
+          ),
+        /Invalid reporting timezone/,
+      );
+      await db.query("rollback to savepoint invalid_zone");
+      await db.query("reset role");
+      await db.query(
+        "update public.goals set weekdays=array[((extract(dow from current_date)::int+1)%7)] where id=$1",
+        [gid],
+      );
+      await db.query("set local role authenticated");
+      await assert.rejects(
+        () =>
+          db.query(
+            "select public.record_progress($1,current_date,10000,'',null,'UTC')",
+            [gid],
+          ),
+        /Not a scheduled/,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "catch-up retains competition boundaries, reporting deadline, and reviewed-entry locks",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set starts_on=current_date-40,ends_on=current_date+3 where id=$1",
+        [cid],
+      );
+      const gid = await addGoal();
+      await db.query(
+        "insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,verification) values($1,$2,$3,current_date-7,10000,'verified')",
+        [cid, users.alice, gid],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      for (const [expression, error] of [
+        ["current_date-7", /Reviewed entries/],
+        ["current_date-41", /Not a scheduled/],
+      ] as const) {
+        await db.query("savepoint invalid_day");
+        await assert.rejects(
+          () =>
+            db.query(
+              `select public.record_progress($1,${expression},10000,'',null,'UTC')`,
+              [gid],
+            ),
+          error,
+        );
+        await db.query("rollback to savepoint invalid_day");
+      }
+      await db.query("reset role");
+      await db.query(
+        "update public.competitions set ends_on=current_date-3 where id=$1",
+        [cid],
+      );
+      await db.query("set local role authenticated");
+      await assert.rejects(
+        () =>
+          db.query(
+            "select public.record_progress($1,current_date-4,10000,'',null,'UTC')",
+            [gid],
+          ),
+        /Reporting is closed/,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "goal removal deletes only the owner's goal and linked records, recalculates scores, and permits orphan screenshot cleanup",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set starts_on=current_date,ends_on=current_date where id=$1",
+        [cid],
+      );
+      const gid = await addGoal();
+      const other = await addGoal(users.bob);
+      const {
+        rows: [entry],
+      } = await db.query(
+        "insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,verification) values($1,$2,$3,current_date,10000,'verified') returning id",
+        [cid, users.alice, gid],
+      );
+      const path = users.alice + "/accidental.png";
+      await db.query(
+        "insert into storage.objects(bucket_id,name) values('progress-evidence',$1)",
+        [path],
+      );
+      await db.query(
+        "insert into public.evidence(entry_id,user_id,competition_id,path) values($1,$2,$3,$4)",
+        [entry.id, users.alice, cid, path],
+      );
+      await db.query(
+        "insert into public.comments(competition_id,entry_id,user_id,body) values($1,$2,$3,'Well done')",
+        [cid, entry.id, users.bob],
+      );
+      await db.query(
+        "insert into public.reactions(competition_id,entry_id,user_id) values($1,$2,$3)",
+        [cid, entry.id, users.bob],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      assert.equal(
+        Number(
+          (
+            await db.query(
+              "select score from public.individual_scores where user_id=$1",
+              [users.alice],
+            )
+          ).rows[0].score,
+        ),
+        100,
+      );
+      const {
+        rows: [removed],
+      } = await db.query("select public.remove_own_goal($1) as paths", [gid]);
+      assert.deepEqual(removed.paths, [path]);
+      for (const table of [
+        "progress_entries",
+        "evidence",
+        "comments",
+        "reactions",
+      ]) {
+        const column = table === "progress_entries" ? "id" : "entry_id";
+        assert.equal(
+          (
+            await db.query(
+              `select count(*)::int as n from public.${table} where ${column}=$1`,
+              [entry.id],
+            )
+          ).rows[0].n,
+          0,
+        );
+      }
+      assert.equal(
+        (
+          await db.query(
+            "select count(*)::int as n from public.goals where id=$1",
+            [gid],
+          )
+        ).rows[0].n,
+        0,
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select count(*)::int as n from public.goals where id=$1",
+            [other],
+          )
+        ).rows[0].n,
+        1,
+      );
+      assert.equal(
+        Number(
+          (
+            await db.query(
+              "select score from public.individual_scores where user_id=$1",
+              [users.alice],
+            )
+          ).rows[0].score,
+        ),
+        0,
+      );
+      assert.equal(
+        (await db.query("delete from storage.objects where name=$1", [path]))
+          .rowCount,
+        1,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "goal removal rejects another owner's goal, suspended members, and anonymous users",
+  async () => {
+    await db.query("begin");
+    try {
+      const gid = await addGoal();
+      for (const name of ["bob", "outsider", "admin"] as const) {
+        await db.query("set local role authenticated");
+        await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+          users[name],
+        ]);
+        await db.query("savepoint forbidden");
+        await assert.rejects(
+          () => db.query("select public.remove_own_goal($1)", [gid]),
+          /Forbidden/,
+        );
+        await db.query("rollback to savepoint forbidden");
+        await db.query("reset role");
+      }
+      await db.query(
+        "update public.memberships set status='suspended' where user_id=$1",
+        [users.alice],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      await db.query("savepoint suspended");
+      await assert.rejects(
+        () => db.query("select public.remove_own_goal($1)", [gid]),
+        /Forbidden/,
+      );
+      await db.query("rollback to savepoint suspended");
+      await db.query("reset role");
+      await db.query("set local role anon");
+      await assert.rejects(
+        () => db.query("select public.remove_own_goal($1)", [gid]),
+        /permission denied/,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);

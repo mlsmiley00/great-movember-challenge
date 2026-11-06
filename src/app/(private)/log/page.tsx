@@ -3,6 +3,7 @@ import { translations } from "@/lib/i18n";
 import { recordProgress } from "../../actions";
 import { PageTitle, Notice, Empty } from "../../ui";
 import Link from "next/link";
+import { ProgressDateField } from "../../progress-date-field";
 export default async function Log({
   searchParams,
 }: {
@@ -30,13 +31,6 @@ export default async function Log({
       .eq("user_id", user.id),
   ]);
   for (const r of [g, e, v]) if (r.error) throw r.error;
-  const today = new Date().toISOString().slice(0, 10);
-  const day =
-    today < "2026-11-01"
-      ? "2026-11-01"
-      : today > "2026-11-30"
-        ? "2026-11-30"
-        : today;
   const labels = {
     honor: t.honor,
     pending: t.pending,
@@ -64,18 +58,11 @@ export default async function Log({
                   ))}
                 </select>
               </label>
-              <div className="form-grid">
-                <label>
-                  {t.date} (UTC)
-                  <input
-                    name="date"
-                    type="date"
-                    min="2026-11-01"
-                    max={today < "2026-11-01" ? "2026-11-01" : day}
-                    defaultValue={day}
-                    required
-                  />
-                </label>
+              <ProgressDateField
+                label={t.date}
+                help={t.catchUpHelp}
+                submit={t.submit}
+              >
                 <label>
                   {t.value}
                   <input
@@ -87,29 +74,23 @@ export default async function Log({
                     required
                   />
                 </label>
-              </div>
-              <label>
-                {t.notes}
-                <textarea name="notes" rows={3} maxLength={1000} />
-              </label>
-              <label>
-                {t.screenshot}
-                <input
-                  name="screenshot"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                />
-                <small>JPG, PNG, WebP · 3 MB max · {t.private}</small>
-              </label>
-              <p className="small muted">
-                {t.honor} · {t.consent}
-              </p>
-              <button disabled={today < "2026-11-01"}>{t.submit} ↗</button>
-              <p className="small muted">
-                {t.date}: UTC. {t.dates}. 48h grace / 48h de gracia. Editing an
-                unreviewed day replaces its entry and screenshot / Editar un día
-                sin revisar reemplaza su registro y captura.
-              </p>
+                <label>
+                  {t.notes}
+                  <textarea name="notes" rows={3} maxLength={1000} />
+                </label>
+                <label>
+                  {t.screenshot}
+                  <input
+                    name="screenshot"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                  />
+                  <small>JPG, PNG, WebP · 3 MB max · {t.private}</small>
+                </label>
+                <p className="small muted">
+                  {t.honor} · {t.consent}
+                </p>
+              </ProgressDateField>
             </form>
           ) : (
             <Empty>
@@ -138,7 +119,7 @@ export default async function Log({
                     {g.data?.find((goal) => goal.id === entry.goal_id)?.unit}
                   </small>
                 </strong>
-                <p className="small muted">{entry.logged_on} · UTC</p>
+                <p className="small muted">{entry.logged_on}</p>
                 {entry.notes && <p>{entry.notes}</p>}
                 {entry.review_note && (
                   <p className="notice">{entry.review_note}</p>
