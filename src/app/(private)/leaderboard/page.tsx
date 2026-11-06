@@ -37,6 +37,7 @@ export default async function Leaderboard() {
           {t.leaderboard} · {t.members}
         </h2>
         <p className="small muted">{t.streakHelp}</p>
+        <p className="small muted">{t.completeDaysHelp}</p>
         {people.length ? (
           <div className="table-scroll">
             <table>
@@ -46,7 +47,7 @@ export default async function Leaderboard() {
                   <th>{t.name}</th>
                   <th>{t.score}</th>
                   <th>{t.streak}</th>
-                  <th>{t.days}</th>
+                  <th>{t.completeDays}</th>
                 </tr>
               </thead>
               <tbody>

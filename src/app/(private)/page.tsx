@@ -48,6 +48,12 @@ export default async function Dashboard({
       .eq("competition_id", COMPETITION)
       .order("place"),
     db
+      .from("daily_completion")
+      .select("activity_date")
+      .eq("competition_id", COMPETITION)
+      .eq("user_id", user.id)
+      .eq("is_complete", true),
+    db
       .from("announcements")
       .select("*")
       .eq("competition_id", COMPETITION)
@@ -56,16 +62,11 @@ export default async function Dashboard({
   ]);
   for (const r of results)
     if (r.error) throw new Error("Unable to load clubhouse");
-  const [ranks, goals, entries, prizes, announcements] = results.map(
+  const [ranks, goals, entries, prizes, fullDays, announcements] = results.map(
     (r) => r.data || [],
   );
   const mine = ranks.find((r) => r.user_id === user.id);
-  const completed = entries.filter(
-    (e) =>
-      e.verification !== "rejected" &&
-      Number(e.value) >=
-        Number(goals.find((g) => g.id === e.goal_id)?.target || Infinity),
-  );
+  const completedDates = fullDays.map((day) => day.activity_date as string);
   const dates = progressDates(entries);
   const rank = mine
     ? 1 + ranks.filter((r) => Number(r.score) > Number(mine.score)).length
@@ -210,10 +211,8 @@ export default async function Dashboard({
                 key={i}
                 title={`November ${i + 1}`}
                 className={
-                  completed.some(
-                    (e) =>
-                      e.logged_on ===
-                      `2026-11-${String(i + 1).padStart(2, "0")}`,
+                  completedDates.includes(
+                    `2026-11-${String(i + 1).padStart(2, "0")}`,
                   )
                     ? "done"
                     : ""
@@ -223,7 +222,7 @@ export default async function Dashboard({
               </span>
             ))}
           </div>
-          <p className="muted small">{t.progress}</p>
+          <p className="muted small">{t.completeDaysHelp}</p>
         </section>
         <section className="panel leaderboard-preview">
           <div className="section-heading">
@@ -245,7 +244,7 @@ export default async function Dashboard({
                 <div>
                   <b>{r.display_name}</b>
                   <small>
-                    {r.completed_days} {t.days}
+                    {t.completeDays}: {r.completed_days}
                   </small>
                 </div>
                 <strong>{Number(r.score).toFixed(1)}</strong>
@@ -263,7 +262,7 @@ export default async function Dashboard({
           <span>✦</span>
         </div>
         <ProgressAchievements
-          completedDates={completed.map((e) => e.logged_on)}
+          completedDates={completedDates}
           dates={dates}
           lang={lang}
         />

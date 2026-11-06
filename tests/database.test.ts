@@ -1808,3 +1808,265 @@ sqlTest(
     }
   },
 );
+
+sqlTest(
+  "completed days count unique dates only when all scheduled goals meet their targets",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set starts_on=current_date-2,ends_on=current_date+1 where id=$1",
+        [cid],
+      );
+      const daily = await addGoal();
+      const strength = await addGoal();
+      await db.query(
+        "update public.goals set weekdays=array[extract(dow from current_date-2)::int,extract(dow from current_date)::int] where id=$1",
+        [strength],
+      );
+      await db.query(
+        "insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,verification) values($1,$2,$3,current_date-2,10000,'honor'),($1,$2,$3,current_date-1,10000,'pending'),($1,$2,$3,current_date,20000,'verified'),($1,$2,$4,current_date,10000,'honor')",
+        [cid, users.alice, daily, strength],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      assert.deepEqual(
+        (
+          await db.query(
+            "select scheduled_goals,completed_goals,is_complete from public.daily_completion where user_id=$1 order by activity_date",
+            [users.alice],
+          )
+        ).rows,
+        [
+          { scheduled_goals: 2, completed_goals: 1, is_complete: false },
+          { scheduled_goals: 1, completed_goals: 1, is_complete: true },
+          { scheduled_goals: 2, completed_goals: 2, is_complete: true },
+        ],
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select completed_days from public.individual_scores where user_id=$1",
+            [users.alice],
+          )
+        ).rows[0].completed_days,
+        2,
+      );
+      assert.equal(
+        Number(
+          (
+            await db.query(
+              "select sum(completed_days) as n from public.goal_scores where user_id=$1",
+              [users.alice],
+            )
+          ).rows[0].n,
+        ),
+        4,
+      );
+      assert.equal(
+        Number(
+          (
+            await db.query(
+              "select score from public.individual_scores where user_id=$1",
+              [users.alice],
+            )
+          ).rows[0].score,
+        ),
+        75,
+      );
+      // Backfilling the missing scheduled goal turns that activity date into one
+      // fully completed day, regardless of the later submission timestamp.
+      await db.query(
+        "select public.record_progress($1,current_date-2,10000,'Catch up',null,'UTC')",
+        [strength],
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select completed_days from public.individual_scores where user_id=$1",
+            [users.alice],
+          )
+        ).rows[0].completed_days,
+        3,
+      );
+      assert.equal(
+        Number(
+          (
+            await db.query(
+              "select sum(completed_days) as n from public.goal_scores where user_id=$1",
+              [users.alice],
+            )
+          ).rows[0].n,
+        ),
+        5,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "missing, under-target, zero and rejected goals prevent full completion",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set starts_on=current_date,ends_on=current_date where id=$1",
+        [cid],
+      );
+      const gid = await addGoal();
+      assert.equal(
+        (
+          await db.query(
+            "select is_complete from public.daily_completion where user_id=$1",
+            [users.alice],
+          )
+        ).rows[0].is_complete,
+        false,
+      );
+      const {
+        rows: [entry],
+      } = await db.query(
+        "insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,verification) values($1,$2,$3,current_date,0,'honor') returning id",
+        [cid, users.alice, gid],
+      );
+      for (const [value, verification, complete] of [
+        [0, "honor", false],
+        [5000, "honor", false],
+        [1000000, "rejected", false],
+        [10000, "honor", true],
+        [10000, "pending", true],
+        [10000, "verified", true],
+      ] as const) {
+        await db.query(
+          "update public.progress_entries set value=$1,verification=$2 where id=$3",
+          [value, verification, entry.id],
+        );
+        assert.equal(
+          (
+            await db.query(
+              "select is_complete from public.daily_completion where user_id=$1",
+              [users.alice],
+            )
+          ).rows[0].is_complete,
+          complete,
+        );
+        assert.equal(
+          (
+            await db.query(
+              "select completed_days from public.individual_scores where user_id=$1",
+              [users.alice],
+            )
+          ).rows[0].completed_days,
+          complete ? 1 : 0,
+        );
+      }
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "rest days and members without goals do not earn completed days, and future dates are excluded",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set starts_on=current_date-2,ends_on=current_date+1 where id=$1",
+        [cid],
+      );
+      const gid = await addGoal();
+      await db.query(
+        "update public.goals set weekdays=array[extract(dow from current_date)::int,extract(dow from current_date+1)::int] where id=$1",
+        [gid],
+      );
+      await db.query(
+        "insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,verification) values($1,$2,$3,current_date,10000,'honor'),($1,$2,$3,current_date+1,10000,'honor')",
+        [cid, users.alice, gid],
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select count(*)::int as n from public.daily_completion where user_id=$1",
+            [users.alice],
+          )
+        ).rows[0].n,
+        1,
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select completed_days from public.individual_scores where user_id=$1",
+            [users.alice],
+          )
+        ).rows[0].completed_days,
+        1,
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select completed_days from public.individual_scores where user_id=$1",
+            [users.bob],
+          )
+        ).rows[0].completed_days,
+        0,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "daily completion retains competition privacy and denies anonymous access",
+  async () => {
+    await db.query("begin");
+    try {
+      const other = "20260000-0000-4000-8000-000000000099";
+      await db.query(
+        "insert into public.competitions(id,name,starts_on,ends_on) values($1,'Other',current_date,current_date)",
+        [other],
+      );
+      await db.query(
+        "insert into public.memberships(competition_id,user_id,display_name) values($1,$2,'Bob elsewhere')",
+        [other, users.bob],
+      );
+      await db.query(
+        "insert into public.goals(competition_id,user_id,title,category,target,unit) values($1,$2,'Other goal','fitness',1,'unit')",
+        [other, users.bob],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      assert.equal(
+        (
+          await db.query(
+            "select * from public.daily_completion where competition_id=$1",
+            [other],
+          )
+        ).rowCount,
+        0,
+      );
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.outsider,
+      ]);
+      assert.equal(
+        (await db.query("select * from public.daily_completion")).rowCount,
+        0,
+      );
+      await db.query("reset role");
+      await db.query("set local role anon");
+      await assert.rejects(
+        () => db.query("select * from public.daily_completion"),
+        /permission denied/,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);

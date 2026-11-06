@@ -106,6 +106,9 @@ export const copy = {
     streakHelp:
       "Any positive progress counts once per activity date. Logging a missed day later restores the streak. Today uses your device’s timezone.",
     days: "days",
+    completeDays: "Fully completed days",
+    completeDaysHelp:
+      "A day is 100% complete when every goal scheduled for that date meets its target. Each date counts once; late logs update the total. Days without scheduled goals do not count.",
     prizes: "The winners’ circle",
     tba: "To Be Announced",
     first: "First place",
@@ -278,6 +281,9 @@ export const copy = {
     streakHelp:
       "Cualquier progreso positivo cuenta una vez por fecha de actividad. Registrar un día olvidado restaura la racha. Hoy se calcula en la zona horaria de tu dispositivo.",
     days: "días",
+    completeDays: "Días completados al 100 %",
+    completeDaysHelp:
+      "Un día está completo al 100 % cuando todas las metas programadas para esa fecha alcanzan su objetivo. Cada fecha cuenta una vez; los registros tardíos actualizan el total. Los días sin metas programadas no cuentan.",
     prizes: "El podio",
     tba: "Por anunciar",
     first: "Primer lugar",
