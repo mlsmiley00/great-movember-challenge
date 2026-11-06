@@ -118,6 +118,17 @@ export const copy = {
     updatePassword: "Update password",
     choosePassword: "New password",
     verification: "Verification",
+    reviewMode: "Progress review policy",
+    reviewRequired: "Require administrator review",
+    reviewModeHelp:
+      "Honor system is the default, including entries with screenshots. Requiring review sends new and updated unreviewed entries to the review queue. Switching back to honor releases all pending entries; existing verified and rejected decisions stay unchanged. Pending entries count provisionally until rejected.",
+    honorModeHelp:
+      "Honor system: your progress counts without approval. Screenshots are optional.",
+    requiredModeHelp:
+      "Administrator review is enabled. Your progress counts provisionally while awaiting review. Screenshots are optional.",
+    reviewModeSaved: "Progress review policy saved.",
+    reviewModeError:
+      "Could not save the progress review policy. Please try again.",
     members: "Members",
     inviteCreate: "Create invitation",
     inviteEmail: "Invited email",
@@ -240,6 +251,17 @@ export const copy = {
     updatePassword: "Actualizar contraseña",
     choosePassword: "Nueva contraseña",
     verification: "Verificación",
+    reviewMode: "Política de revisión del progreso",
+    reviewRequired: "Exigir revisión del administrador",
+    reviewModeHelp:
+      "El sistema de honor es la opción predeterminada, incluso con capturas. Al exigir revisión, los registros nuevos y las actualizaciones sin revisar pasan a la cola. Al volver al sistema de honor se liberan los registros pendientes; se conservan las decisiones de verificación y rechazo. Los registros pendientes cuentan provisionalmente hasta ser rechazados.",
+    honorModeHelp:
+      "Sistema de honor: tu progreso cuenta sin aprobación. Las capturas son opcionales.",
+    requiredModeHelp:
+      "La revisión del administrador está activada. Tu progreso cuenta provisionalmente mientras se revisa. Las capturas son opcionales.",
+    reviewModeSaved: "Se ha guardado la política de revisión del progreso.",
+    reviewModeError:
+      "No se pudo guardar la política de revisión. Inténtalo de nuevo.",
     members: "Miembros",
     inviteCreate: "Crear invitación",
     inviteEmail: "Correo del invitado",

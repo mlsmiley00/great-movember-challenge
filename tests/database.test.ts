@@ -41,9 +41,37 @@ before(async () => {
   for (const filename of (await readdir(migrationsDirectory))
     .filter((f) => f.endsWith(".sql"))
     .sort()) {
+    if (filename === "202611060002_honor_system_default.sql") {
+      await db.query(`
+        insert into auth.users values('90000000-0000-4000-8000-000000000001','migration@example.com',now());
+        insert into public.memberships(competition_id,user_id,display_name) values('${cid}','90000000-0000-4000-8000-000000000001','Migration fixture');
+        insert into public.goals(id,competition_id,user_id,title,category,target,unit) values('90000000-0000-4000-8000-000000000002','${cid}','90000000-0000-4000-8000-000000000001','Migration goal','fitness',10000,'steps');
+        insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,notes,verification)
+        select '${cid}','90000000-0000-4000-8000-000000000001','90000000-0000-4000-8000-000000000002','2026-11-01'::date + n,10000,status,status
+        from (values (0,'pending'),(1,'verified'),(2,'rejected')) as fixture(n,status);
+      `);
+    }
     await db.query(
       await readFile(new URL(filename, migrationsDirectory), "utf8"),
     );
+    if (filename === "202611060002_honor_system_default.sql") {
+      assert.deepEqual(
+        (
+          await db.query(
+            "select notes,verification from public.progress_entries where goal_id='90000000-0000-4000-8000-000000000002' order by logged_on",
+          )
+        ).rows,
+        [
+          { notes: "pending", verification: "honor" },
+          { notes: "verified", verification: "verified" },
+          { notes: "rejected", verification: "rejected" },
+        ],
+      );
+      await db.query(`delete from public.progress_entries where goal_id='90000000-0000-4000-8000-000000000002';
+        delete from public.goals where id='90000000-0000-4000-8000-000000000002';
+        delete from public.memberships where user_id='90000000-0000-4000-8000-000000000001';
+        delete from auth.users where id='90000000-0000-4000-8000-000000000001';`);
+    }
   }
   for (const [name, id] of Object.entries(users))
     await db.query("insert into auth.users values($1,$2,$3)", [
@@ -1359,6 +1387,189 @@ sqlTest(
       await db.query("set local role anon");
       await assert.rejects(
         () => db.query("select public.remove_own_goal($1)", [gid]),
+        /permission denied/,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "honor is the default with and without screenshots, including updates",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set starts_on=current_date,ends_on=current_date where id=$1",
+        [cid],
+      );
+      assert.equal(
+        (
+          await db.query(
+            "select require_progress_review from public.competitions where id=$1",
+            [cid],
+          )
+        ).rows[0].require_progress_review,
+        false,
+      );
+      const gid = await addGoal();
+      const path = users.alice + "/honor-proof.png";
+      await db.query(
+        "insert into storage.objects(bucket_id,name) values('progress-evidence',$1)",
+        [path],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      for (const screenshot of [null, path, null]) {
+        const {
+          rows: [entry],
+        } = await db.query(
+          "select public.record_progress($1,current_date,10000,'', $2,'UTC') as id",
+          [gid, screenshot],
+        );
+        assert.equal(
+          (
+            await db.query(
+              "select verification from public.progress_entries where id=$1",
+              [entry.id],
+            )
+          ).rows[0].verification,
+          "honor",
+        );
+        assert.equal(
+          (
+            await db.query(
+              "select count(*)::int as n from public.evidence where entry_id=$1",
+              [entry.id],
+            )
+          ).rows[0].n,
+          screenshot ? 1 : 0,
+        );
+      }
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "admins can require review for all new reports and turn it off to release pending entries",
+  async () => {
+    await db.query("begin");
+    try {
+      await db.query(
+        "update public.competitions set starts_on=current_date-3,ends_on=current_date where id=$1",
+        [cid],
+      );
+      const gid = await addGoal();
+      const other = await addGoal();
+      const path = users.alice + "/required-proof.png";
+      await db.query(
+        "insert into storage.objects(bucket_id,name) values('progress-evidence',$1)",
+        [path],
+      );
+      await db.query(
+        "insert into public.progress_entries(competition_id,user_id,goal_id,logged_on,value,verification) values($1,$2,$3,current_date-1,10000,'verified'),($1,$2,$3,current_date-2,10000,'rejected'),($1,$2,$3,current_date-3,10000,'honor')",
+        [cid, users.alice, gid],
+      );
+      await db.query("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.admin,
+      ]);
+      await db.query("select public.set_progress_review($1,true)", [cid]);
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.alice,
+      ]);
+      for (const [goal, screenshot] of [
+        [gid, null],
+        [other, path],
+      ] as const) {
+        const {
+          rows: [entry],
+        } = await db.query(
+          "select public.record_progress($1,current_date,10000,'', $2) as id",
+          [goal, screenshot],
+        );
+        assert.equal(
+          (
+            await db.query(
+              "select verification from public.progress_entries where id=$1",
+              [entry.id],
+            )
+          ).rows[0].verification,
+          "pending",
+        );
+      }
+      await db.query(
+        "select public.record_progress($1,current_date-3,10000,'updated',null,'UTC')",
+        [gid],
+      );
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        users.admin,
+      ]);
+      await db.query("select public.set_progress_review($1,false)", [cid]);
+      assert.equal(
+        (
+          await db.query(
+            "select count(*)::int as n from public.progress_entries where verification='pending'",
+          )
+        ).rows[0].n,
+        0,
+      );
+      const {
+        rows: [counts],
+      } = await db.query(
+        "select count(*) filter(where verification='honor')::int as honor,count(*) filter(where verification='verified')::int as verified,count(*) filter(where verification='rejected')::int as rejected from public.progress_entries where goal_id in ($1,$2)",
+        [gid, other],
+      );
+      assert.deepEqual(counts, { honor: 3, verified: 1, rejected: 1 });
+      assert.equal(
+        (
+          await db.query(
+            "select count(*)::int as n from public.evidence where path=$1",
+            [path],
+          )
+        ).rows[0].n,
+        1,
+      );
+    } finally {
+      await db.query("rollback");
+    }
+  },
+);
+
+sqlTest(
+  "review mode is admin-only and cannot be changed directly by a member",
+  async () => {
+    await asUser("alice", async () => {
+      for (const statement of [
+        "select public.set_progress_review('" + cid + "',true)",
+        "update public.competitions set require_progress_review=true where id='" +
+          cid +
+          "'",
+      ]) {
+        await db.query("savepoint forbidden");
+        await assert.rejects(
+          () => db.query(statement),
+          /Forbidden|permission denied/,
+        );
+        await db.query("rollback to savepoint forbidden");
+      }
+    });
+    await asUser("outsider", async () => {
+      await assert.rejects(
+        () => db.query("select public.set_progress_review($1,true)", [cid]),
+        /Forbidden/,
+      );
+    });
+    await db.query("begin");
+    try {
+      await db.query("set local role anon");
+      await assert.rejects(
+        () => db.query("select public.set_progress_review($1,true)", [cid]),
         /permission denied/,
       );
     } finally {

@@ -339,6 +339,20 @@ export async function invite(f: FormData) {
     "Invitation created. Share the code privately. / Comparte el código en privado.",
   );
 }
+export async function setProgressReview(f: FormData) {
+  const { db } = await admin();
+  const t = await translations();
+  const mode = text(f, "review_mode");
+  if (mode !== "honor" && mode !== "required")
+    fail("/admin", t.reviewModeError);
+  const { error } = await db.rpc("set_progress_review", {
+    cid: COMPETITION,
+    review_required: mode === "required",
+  });
+  if (error) fail("/admin", t.reviewModeError);
+  success("/admin", t.reviewModeSaved);
+}
+
 export async function review(f: FormData) {
   const { db } = await admin();
   const { error } = await db.rpc("review_progress", {

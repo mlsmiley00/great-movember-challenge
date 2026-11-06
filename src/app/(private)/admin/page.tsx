@@ -9,6 +9,7 @@ import {
   prize,
   editGoal,
   revokeInvite,
+  setProgressReview,
 } from "../../actions";
 import { PageTitle, Notice, Empty } from "../../ui";
 import { Weekdays } from "../../goal-form";
@@ -19,6 +20,12 @@ export default async function Admin({
 }) {
   const { db } = await admin();
   const t = await translations();
+  const { data: competition, error: competitionError } = await db
+    .from("competitions")
+    .select("require_progress_review")
+    .eq("id", COMPETITION)
+    .single();
+  if (competitionError) throw competitionError;
   const results = await Promise.all([
     db
       .from("memberships")
@@ -54,6 +61,25 @@ export default async function Admin({
     <>
       <PageTitle eyebrow="KEEP THE CLUB RUNNING" title={t.admin} />
       <Notice searchParams={searchParams} />
+      <section className="panel">
+        <h2>{t.reviewMode}</h2>
+        <p className="muted small">{t.reviewModeHelp}</p>
+        <form action={setProgressReview} className="stack">
+          <label>
+            {t.reviewMode}
+            <select
+              name="review_mode"
+              defaultValue={
+                competition.require_progress_review ? "required" : "honor"
+              }
+            >
+              <option value="honor">{t.honor}</option>
+              <option value="required">{t.reviewRequired}</option>
+            </select>
+          </label>
+          <button>{t.save}</button>
+        </form>
+      </section>
       <div className="two-columns">
         <section className="panel">
           <h2>{t.inviteCreate}</h2>

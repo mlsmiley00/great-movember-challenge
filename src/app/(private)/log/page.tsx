@@ -11,6 +11,12 @@ export default async function Log({
 }) {
   const { db, user } = await member();
   const t = await translations();
+  const { data: competition, error: competitionError } = await db
+    .from("competitions")
+    .select("require_progress_review")
+    .eq("id", COMPETITION)
+    .single();
+  if (competitionError) throw competitionError;
   const [g, e, v] = await Promise.all([
     db
       .from("goals")
@@ -46,6 +52,11 @@ export default async function Log({
       <div className="two-columns">
         <section className="panel">
           <h2>{t.submit}</h2>
+          <p className="notice">
+            {competition.require_progress_review
+              ? t.requiredModeHelp
+              : t.honorModeHelp}
+          </p>
           {g.data?.length ? (
             <form action={recordProgress} className="stack">
               <label>
