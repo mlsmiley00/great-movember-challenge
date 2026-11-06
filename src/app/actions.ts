@@ -8,6 +8,7 @@ import { supabase, configured } from "@/lib/supabase/server";
 import { admin, member, COMPETITION } from "@/lib/auth";
 import { translations } from "@/lib/i18n";
 import { publicSignup, captchaToken } from "@/lib/signup";
+import { signInFailure } from "@/lib/sign-in-error";
 import { verifyRecovery, validPasswordPair } from "@/lib/password-recovery";
 const text = (f: FormData, key: string) => String(f.get(key) || "").trim();
 function fail(path: string, message: string): never {
@@ -39,17 +40,45 @@ export async function changeLocale(f: FormData) {
 export async function signIn(f: FormData) {
   if (!configured())
     fail("/login", "Supabase is not configured / Supabase no está configurado");
+  const t = await translations();
+  const token = captchaToken(f);
+  if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !token)
+    fail("/login", t.signInCaptcha);
   const db = await supabase();
-  const { error } = await db.auth.signInWithPassword({
-    email: text(f, "email"),
-    password: String(f.get("password") || ""),
-    options: { captchaToken: captchaToken(f) },
-  });
-  if (error)
-    fail(
-      "/login",
-      "Unable to sign in. Check your credentials and verify your email. / Revisa tus datos y verifica tu correo.",
+  let authError: unknown = null;
+  try {
+    const { error } = await db.auth.signInWithPassword({
+      email: text(f, "email"),
+      password: String(f.get("password") || ""),
+      options: { captchaToken: token },
+    });
+    authError = error;
+  } catch (error) {
+    authError = error;
+  }
+  if (authError) {
+    const failure = signInFailure(authError);
+    const reference = randomUUID();
+    console.error(
+      JSON.stringify({
+        event: "sign_in_failed",
+        reference,
+        ...failure,
+        widgetConfigured: Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY),
+      }),
     );
+    const message =
+      failure.kind === "captcha"
+        ? t.signInCaptcha
+        : failure.kind === "credentials"
+          ? t.signInCredentials
+          : failure.kind === "unverified"
+            ? t.signInUnverified
+            : failure.kind === "rateLimited"
+              ? t.signInRateLimited
+              : t.signInUnavailable;
+    fail("/login", `${message} ${t.authReference}: ${reference}`);
+  }
   redirect("/");
 }
 export async function signUp(f: FormData) {

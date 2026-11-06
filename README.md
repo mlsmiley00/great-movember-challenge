@@ -212,3 +212,18 @@ Registration also stays disabled in the application when the site key is absent,
 The `auth.users` trigger enrolls a verified user only when signup metadata contains a valid display name and explicit boolean consent. It always writes `role='member'` and never trusts role/status/competition metadata supplied by a client. Duplicate callbacks do not duplicate membership or change existing roles/status. Existing verified accounts without enrollment can complete the name/consent form at `/join`, which calls an authenticated database function; it requires email verification and cannot restore suspended accounts. Existing unverified accounts remain blocked from club data. No existing users are bulk-enrolled by the migration.
 
 Automated coverage includes closed-by-default rollout, anonymous-data protection, consent/name validation, ordinary-member assignment, idempotency, suspended-account protection, and widget expiration/error states. The Turnstile/Supabase integration must also be tested on the hosted project with real production keys. CAPTCHA reduces automated abuse; it cannot guarantee that every bot will be excluded. Email verification and Supabase rate limits remain necessary layers.
+
+## Sign-in troubleshooting and password input sizing
+
+The password input uses a grid with a flexible input column and an auto-sized visibility control. The full-width login-button style applies only to the form's direct submit button; it must not target the nested Show/Hide button. Password inputs are at least 48px high with 16px text, and on narrow screens the visibility control appears below the input. Browser regression tests check usable password widths in both languages.
+
+A failed password submission can consume its CAPTCHA token. Same-page server-action redirects can preserve client components, so BotCheck explicitly clears the used token and resets the widget after each completed submission, including unsuccessful attempts. Buttons remain disabled until the replacement challenge completes. Login failures now distinguish CAPTCHA failure, incorrect credentials, unverified email, rate limiting, and temporary provider unavailability. Logs contain only allowlisted codes/status, a random support reference, and whether a site key is configured; never passwords, addresses, raw errors, cookies, or tokens.
+
+If production rejects all sign-ins immediately after enabling CAPTCHA, check the deployed setup before resetting any user's password:
+
+- Cloudflare's widget must allow the actual address-bar hostname, including `great-movember-challenge.vercel.app` if that is the URL used.
+- Vercel Production must have `NEXT_PUBLIC_TURNSTILE_SITE_KEY` set to the widget's **public site key**, and the current deployment must have been rebuilt after setting it.
+- Supabase CAPTCHA must use provider **Turnstile** and the **secret key from that same widget**. A different widget's secret or using the public key in the secret field will not verify tokens.
+- For a displayed support reference, inspect the matching `sign_in_failed` event in Vercel runtime logs. `captcha_failed` with `widgetConfigured=false` indicates that the deployed application lacks the widget key; CAPTCHA failures with a configured widget need the hostname/key pairing checked. `invalid_credentials` is a separate password/email failure.
+
+Local provider mocks exercise a failed-password attempt followed by a successful retry with a fresh single-use token. Hosted-provider configuration and real-device acceptance still require the actual deployed keys and Supabase settings, which are not accessible from this workspace.

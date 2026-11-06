@@ -60,6 +60,16 @@ export const copy = {
     welcome: "Welcome to the club",
     join: "Join the challenge",
     login: "Sign in",
+    signInCaptcha:
+      "The security check failed or expired. Complete the refreshed check and try again. If this continues, contact the club administrator.",
+    signInCredentials:
+      "Unable to sign in. Check your email and password, or request a password reset.",
+    signInUnverified: "Please verify your email before signing in.",
+    signInRateLimited:
+      "Too many sign-in attempts. Please wait before trying again.",
+    signInUnavailable:
+      "Sign-in is temporarily unavailable. Please try again or contact the club administrator.",
+    authReference: "Support reference",
     email: "Email address",
     password: "Password",
     showPassword: "Show password",
@@ -219,6 +229,16 @@ export const copy = {
     welcome: "Bienvenido al club",
     join: "Únete al reto",
     login: "Iniciar sesión",
+    signInCaptcha:
+      "La comprobación de seguridad falló o caducó. Completa la nueva comprobación e inténtalo de nuevo. Si continúa, contacta con el administrador.",
+    signInCredentials:
+      "No se pudo iniciar sesión. Revisa el correo y la contraseña o solicita restablecerla.",
+    signInUnverified: "Verifica tu correo antes de iniciar sesión.",
+    signInRateLimited:
+      "Demasiados intentos de inicio de sesión. Espera antes de intentarlo de nuevo.",
+    signInUnavailable:
+      "El inicio de sesión no está disponible temporalmente. Inténtalo de nuevo o contacta con el administrador.",
+    authReference: "Referencia de soporte",
     email: "Correo electrónico",
     password: "Contraseña",
     showPassword: "Mostrar contraseña",

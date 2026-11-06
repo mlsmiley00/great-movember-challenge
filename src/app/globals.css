@@ -1289,7 +1289,7 @@ details[open] > summary {
 .login-forms > .stack {
   margin-bottom: 28px;
 }
-.login-forms > .stack button {
+.login-forms > .stack > button {
   width: 100%;
   justify-content: space-between;
 }
@@ -2017,14 +2017,16 @@ details[open] > summary {
   min-width: 0;
 }
 .password-control {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: stretch;
 }
 .password-control input {
   min-width: 0;
-  flex: 1;
-  width: 0;
+  width: 100%;
+  min-height: 48px;
+  font-size: 16px;
 }
 .password-control button {
   flex-shrink: 0;
@@ -2034,10 +2036,10 @@ details[open] > summary {
 }
 @media (max-width: 400px) {
   .password-control {
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr);
   }
-  .password-control input {
-    flex-basis: 100%;
-    width: 100%;
+  .password-control button {
+    justify-self: start;
+    width: auto;
   }
 }

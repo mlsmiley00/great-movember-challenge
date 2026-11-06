@@ -41,6 +41,22 @@ export function BotCheck({
   const [token, setToken] = useState("");
   const [error, setError] = useState(false);
   const { pending } = useFormStatus();
+  const wasPending = useRef(false);
+  useEffect(() => {
+    if (wasPending.current && !pending && siteKey) {
+      // CAPTCHA tokens are single-use, even when the password was incorrect.
+      // Same-page action redirects can preserve this component and its token.
+      setToken("");
+      if (widget.current !== null) {
+        try {
+          window.turnstile?.reset(widget.current);
+        } catch {
+          setError(true);
+        }
+      }
+    }
+    wasPending.current = pending;
+  }, [pending, siteKey]);
   const render = useCallback(() => {
     if (
       !siteKey ||

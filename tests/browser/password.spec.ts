@@ -44,6 +44,33 @@ test("login and registration password visibility preserves typed values", async 
   ).toBeTruthy();
 });
 
+test("password inputs have usable width beside the visibility button", async ({
+  page,
+}) => {
+  for (const lang of ["en", "es"]) {
+    await page
+      .context()
+      .addCookies([
+        { name: "locale", value: lang, url: "http://127.0.0.1:3000" },
+      ]);
+    await page.goto("/login");
+    const form = page
+      .locator("form")
+      .filter({ has: page.locator('input[autocomplete="current-password"]') });
+    const email = await form.locator("input[name=email]").boundingBox();
+    const password = await form.locator("input[name=password]").boundingBox();
+    expect(password!.width).toBeGreaterThanOrEqual(
+      Math.min(170, email!.width * 0.55),
+    );
+    expect(password!.height).toBeGreaterThanOrEqual(44);
+    expect(
+      await form
+        .locator("input[name=password]")
+        .evaluate((el) => getComputedStyle(el).fontSize),
+    ).toBe("16px");
+  }
+});
+
 test("Spanish password visibility labels are accessible", async ({ page }) => {
   await page
     .context()
